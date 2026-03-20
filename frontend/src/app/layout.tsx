@@ -74,8 +74,8 @@ export default function RootLayout({
         
         {children}
 
-        <footer className="bg-black text-white py-12 text-center text-sm text-gray-400">
-          <div className="max-w-6xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <footer className="bg-black py-12 text-center text-sm text-gray-400">
+          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-8 md:flex-row">
             <p>&copy; {new Date().getFullYear()} Bay&apos;s Baked Goods. All rights reserved.</p>
             <div className="flex gap-4">
               <a
@@ -95,6 +95,16 @@ export default function RootLayout({
                 Instagram
               </a>
             </div>
+          </div>
+          <div className="mx-auto mt-4 max-w-6xl px-8">
+            <a
+              href="https://www.merrilldigitalsystems.com"
+              className="text-gray-500 transition-colors hover:text-white"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Created by Merrill Digital Systems
+            </a>
           </div>
         </footer>
       </body>
