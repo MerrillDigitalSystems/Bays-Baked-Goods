@@ -9,12 +9,16 @@ const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-serif"
 export const metadata: Metadata = {
   metadataBase: new URL("https://baysbakedgoods.com"),
   title: "Bay's Baked Goods | Artisan Bread & Sweet Treats",
-  description: "Home bakery in West Jordan, Utah offering artisan sourdough bread, bagels, cinnamon rolls, and sweet treats. Order today!",
-  keywords: "bakery, sourdough, West Jordan, Utah, artisan bread, sweet treats, cookies, cinnamon rolls, bagels",
+  description: "Home bakery in West Jordan, Utah offering artisan sourdough bread, focaccia, bagels, cinnamon rolls, cookies, and sweet treats. Order today!",
+  keywords: "bakery, sourdough, focaccia, West Jordan, Utah, artisan bread, sweet treats, cookies, cinnamon rolls, bagels",
   applicationName: "Bay's Baked Goods",
   category: "food",
   alternates: {
     canonical: "/",
+  },
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
   },
   robots: {
     index: true,

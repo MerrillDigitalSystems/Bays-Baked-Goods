@@ -1,0 +1,16 @@
+[Unit]
+Description=Bay's Baked Goods Next.js app
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kruzer04
+WorkingDirectory=/home/kruzer04/Bays-Baked-Goods/frontend
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm run start:pi
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

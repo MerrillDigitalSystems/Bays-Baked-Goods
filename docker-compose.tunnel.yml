@@ -1,0 +1,18 @@
+# Bay's Baked Goods — isolated Cloudflare Tunnel (token from Cloudflare dashboard).
+# 1. Copy .env.example → .env and set CLOUDFLARE_TUNNEL_TOKEN to the token value only
+#    (not the full `docker run ... --token ...` command). Never commit `.env`.
+# 2. In Zero Trust → Tunnels → this tunnel → Public Hostname, point baysbakedgoods.com
+#    to http://host.docker.internal:3001 if you use `npm run start:pi` (recommended when :3000
+#    is already used, e.g. by MDS-OS). Otherwise http://host.docker.internal:3000 for `npm start`.
+# 3. docker compose -f docker-compose.tunnel.yml up -d
+#
+# If host.docker.internal fails on your Pi, use http://172.17.0.1:PORT in the dashboard instead.
+
+services:
+  cloudflared-bays:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-bays-baked-goods
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}

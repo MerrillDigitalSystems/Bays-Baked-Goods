@@ -1,24 +1,27 @@
 import Image from "next/image";
 import Link from "next/link";
 
-const menuSections = [
+const signatureMenuItems = [
+  { name: "Plain Sourdough", size: "Mini / Regular", price: "$5 / $10" },
+  { name: "Jalapeno Cheddar Sourdough", size: "Mini / Regular", price: "$6 / $12" },
+  { name: "Cinnamon Sugar Sourdough", size: "Mini / Regular", price: "$6 / $12" },
+  { name: "Plain Bagels", size: "4 Pack / 8 Pack", price: "$8 / $16" },
+  { name: "Thyme & Honey Focaccia", size: null, price: "$15" },
+  { name: "Cinnamon Rolls", size: "4 Jumbo / 8 Jumbo", price: "$12 / $24" },
   {
-    title: "Bread",
-    items: [
-      { name: "Plain Sourdough", size: "Mini / Reg", price: "$5 / $10" },
-      { name: "Jalapeno Cheddar", size: "Mini / Reg", price: "$6 / $12" },
-      { name: "Cinnamon Sugar", size: "Mini / Reg", price: "$6 / $12" },
-      { name: "Plain Bagels", size: "4 Pk / 8 Pk", price: "$8 / $16" },
-    ],
+    name: "Brown Butter Choc Chunk Cookies",
+    size: "4 Jumbo / 8 Jumbo",
+    price: "$8 / $16",
   },
-  {
-    title: "Sweet Treats",
-    items: [
-      { name: "Cinnamon Rolls", size: "4 Jumbo / 8 Jumbo", price: "$12 / $24" },
-      { name: "Brown Butter Choc Chunk Cookies", size: "4 Jumbo / 8 Jumbo", price: "$8 / $16" },
-      { name: "Oreo Truffles", size: "4 Pk / 8 Pk", price: "$8 / $16" },
-    ],
-  },
+] as const;
+
+const customMenuItems = [
+  { name: "Sourdough", smallLabel: "1-2 Inclusions", smallPrice: "$13-$15", largeLabel: "3+ Inclusions", largePrice: "$16-$18" },
+  { name: "Focaccia", smallLabel: "1-2 Inclusions", smallPrice: "$14-$17", largeLabel: "3+ Inclusions", largePrice: "$18-$20" },
+  { name: "Bagels (4)", smallLabel: "1-2 Inclusions", smallPrice: "$10-$11", largeLabel: "3+ Inclusions", largePrice: "$12-$14" },
+  { name: "Bagels (8)", smallLabel: "1-2 Inclusions", smallPrice: "$18-$19", largeLabel: "3+ Inclusions", largePrice: "$20-$22" },
+  { name: "Brown Butter Cookies (4)", smallLabel: "1-2 Inclusions", smallPrice: "$9-$10", largeLabel: "3+ Inclusions", largePrice: "$11-$13" },
+  { name: "Brown Butter Cookies (8)", smallLabel: "1-2 Inclusions", smallPrice: "$17-$18", largeLabel: "3+ Inclusions", largePrice: "$19-$21" },
 ] as const;
 
 const bakerySchema = {
@@ -27,7 +30,7 @@ const bakerySchema = {
   name: "Bay's Baked Goods",
   image: "https://baysbakedgoods.com/logo.png",
   description:
-    "Bay's Baked Goods is a home bakery in West Jordan, Utah offering artisan sourdough bread, bagels, cinnamon rolls, cookies, and sweet treats.",
+    "Bay's Baked Goods is a home bakery in West Jordan, Utah offering artisan sourdough bread, focaccia, bagels, cinnamon rolls, cookies, and sweet treats.",
   telephone: "+1-801-450-3852",
   url: "https://baysbakedgoods.com",
   address: {
@@ -65,7 +68,7 @@ export default function Home() {
                 Artisan bread and sweet treats made for slow mornings and special gatherings.
               </h1>
               <p className="max-w-2xl text-lg leading-8 text-black/70 sm:text-xl">
-                Fresh sourdough, bagels, cinnamon rolls, cookies, and more. Order from Bay&apos;s Baked Goods and enjoy homemade goodness baked in West Jordan.
+                Fresh sourdough, focaccia, bagels, cinnamon rolls, cookies, and more. Order from Bay&apos;s Baked Goods and enjoy homemade goodness baked in West Jordan.
               </p>
             </div>
 
@@ -155,7 +158,7 @@ export default function Home() {
           </div>
           <div>
             <p className="text-lg font-semibold text-black">1. Pick your treats</p>
-            <p className="mt-2 leading-7 text-black/70">Browse the menu and choose what sounds good, whether that is sourdough, bagels, cinnamon rolls, or sweets.</p>
+            <p className="mt-2 leading-7 text-black/70">Browse the menu and choose what sounds good, whether that is sourdough, focaccia, bagels, cinnamon rolls, or sweets.</p>
           </div>
           <div>
             <p className="text-lg font-semibold text-black">2. Send a text</p>
@@ -172,23 +175,45 @@ export default function Home() {
             <div className="mx-auto mt-4 h-1 w-24 rounded-full bg-black" />
           </div>
 
-          <div className="grid gap-16 md:grid-cols-2">
-            {menuSections.map((section) => (
-              <div key={section.title} className="space-y-10">
-                <h3 className="border-b-2 border-black/10 pb-4 text-3xl font-serif italic">{section.title}</h3>
-                {section.items.map((item) => (
-                  <div key={item.name} className="group">
-                    <div className="flex items-end justify-between gap-6 border-b border-black/5 pb-4 transition-colors group-hover:border-black/20">
-                      <h4 className="text-xl font-medium">{item.name}</h4>
-                      <div className="shrink-0 text-right">
+          <div className="space-y-20">
+            <div className="space-y-10">
+              {signatureMenuItems.map((item) => (
+                <div key={item.name} className="group">
+                  <div className="flex items-end justify-between gap-6 border-b border-black/5 pb-4 transition-colors group-hover:border-black/20">
+                    <h3 className="max-w-xl text-xl font-medium sm:text-2xl">{item.name}</h3>
+                    <div className="shrink-0 text-right">
+                      {item.size ? (
                         <span className="mb-1 block text-xs uppercase tracking-wider text-gray-500">{item.size}</span>
-                        <span className="text-xl font-medium">{item.price}</span>
-                      </div>
+                      ) : null}
+                      <span className="text-xl font-medium sm:text-2xl">{item.price}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-[2rem] border border-black/8 bg-white/45 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.05)] sm:p-10">
+              <div className="mb-10 text-center">
+                <p className="text-sm font-semibold uppercase tracking-[0.25em] text-black/55">Custom pricing</p>
+                <h3 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">Make Your Own</h3>
+              </div>
+
+              <div className="space-y-8">
+                {customMenuItems.map((item) => (
+                  <div key={item.name} className="grid gap-4 border-b border-black/5 pb-6 last:border-b-0 last:pb-0 md:grid-cols-[1.2fr_0.8fr_0.8fr] md:items-end">
+                    <h4 className="text-2xl font-medium">{item.name}</h4>
+                    <div className="text-left md:text-right">
+                      <span className="mb-1 block text-xs uppercase tracking-wider text-gray-500">{item.smallLabel}</span>
+                      <span className="text-2xl font-medium">{item.smallPrice}</span>
+                    </div>
+                    <div className="text-left md:text-right">
+                      <span className="mb-1 block text-xs uppercase tracking-wider text-gray-500">{item.largeLabel}</span>
+                      <span className="text-2xl font-medium">{item.largePrice}</span>
                     </div>
                   </div>
                 ))}
               </div>
-            ))}
+            </div>
           </div>
 
           <div className="mt-20 rounded-2xl border border-black/5 bg-white/40 p-8 text-center">
