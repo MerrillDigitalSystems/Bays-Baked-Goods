@@ -91,12 +91,12 @@ export default function Home() {
             <div className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/55 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.08)] backdrop-blur-sm">
               <div className="relative aspect-square w-full max-h-[min(80vw,28rem)] mx-auto">
                 <Image
-                  src="/logo.png"
-                  alt="Bay's Baked Goods logo  -  artisan bakery in West Jordan, Utah"
+                  src="/IMG_6761_VSCO.JPG"
+                  alt="Fresh baked goods from Bay's Baked Goods, West Jordan, Utah"
                   fill
                   sizes="(max-width: 1024px) 90vw, min(28rem, 35vw)"
                   priority
-                  className="object-contain mix-blend-multiply"
+                  className="object-cover object-center"
                 />
               </div>
             </div>
@@ -204,7 +204,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="px-8 pb-24">
+      <section className="px-8 py-16 md:py-24">
         <div className="mx-auto max-w-3xl rounded-3xl border border-black/8 bg-[#1a1a1a] px-8 py-14 text-center text-[#f5f3ec]">
           <h2 className="font-serif text-3xl italic md:text-4xl">Questions or a custom order?</h2>
           <p className="mx-auto mt-4 max-w-xl text-lg text-gray-400">

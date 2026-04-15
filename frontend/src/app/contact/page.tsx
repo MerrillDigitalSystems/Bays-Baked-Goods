@@ -3,7 +3,7 @@ import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
 import { formatDeliveryFeeDisplay } from "@/config/site";
 import { bakerySchema } from "@/data/menu";
-import { getFaqEntries, getFaqPageJsonLd } from "@/data/faq";
+import { faqSmsIntro, getFaqEntries, getFaqPageJsonLd } from "@/data/faq";
 import { jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
@@ -107,7 +107,10 @@ export default function ContactPage() {
           <h2 className="text-center font-serif text-3xl italic text-black md:text-4xl">
             Frequently asked questions
           </h2>
-          <dl className="mt-12 space-y-10">
+          <p className="mx-auto mt-6 max-w-2xl text-center text-lg leading-relaxed text-black/75">
+            {faqSmsIntro}
+          </p>
+          <dl className="mt-10 space-y-10">
             {faq.map((item) => (
               <div key={item.question}>
                 <dt className="text-lg font-semibold text-black">{item.question}</dt>

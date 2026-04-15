@@ -90,6 +90,7 @@ export const checkoutProducts: {
     id: "plain-sourdough",
     title: "Plain Sourdough",
     description: "Classic sourdough with a chewy crumb and crispy crust. Good for everything.",
+    imageSrc: "/IMG_6002_VSCO.JPG",
     variants: [
       { sku: "plain-sourdough-mini", shortLabel: "Mini", priceDisplay: "$5" },
       { sku: "plain-sourdough-regular", shortLabel: "Regular", priceDisplay: "$10" },
@@ -99,6 +100,7 @@ export const checkoutProducts: {
     id: "jalapeno-cheddar",
     title: "Jalapeño Cheddar Sourdough",
     description: "A little heat and sharp cheddar baked into every slice.",
+    imageSrc: "/IMG_5967_VSCO.JPG",
     variants: [
       { sku: "jalapeno-mini", shortLabel: "Mini", priceDisplay: "$6" },
       { sku: "jalapeno-regular", shortLabel: "Regular", priceDisplay: "$12" },
@@ -108,6 +110,7 @@ export const checkoutProducts: {
     id: "cinnamon-sugar",
     title: "Cinnamon Sugar Sourdough",
     description: "Sourdough swirled with cinnamon sugar. Hard to eat just one slice.",
+    imageSrc: "/IMG_6249_VSCO.JPG",
     variants: [
       { sku: "cinnamon-sugar-mini", shortLabel: "Mini", priceDisplay: "$6" },
       { sku: "cinnamon-sugar-regular", shortLabel: "Regular", priceDisplay: "$12" },
@@ -117,6 +120,7 @@ export const checkoutProducts: {
     id: "plain-bagels",
     title: "Plain Bagels",
     description: "Chewy, boiled bagels  -  perfect with cream cheese or your favorite spread.",
+    imageSrc: "/2BD15450-2976-4311-A7ED-7117767DF9FC_VSCO.JPG",
     variants: [
       { sku: "plain-bagels-4", shortLabel: "4 pack", priceDisplay: "$8" },
       { sku: "plain-bagels-8", shortLabel: "8 pack", priceDisplay: "$16" },
@@ -127,6 +131,7 @@ export const checkoutProducts: {
     title: "Thyme & Honey Focaccia",
     description:
       "Dimpled focaccia with thyme and a drizzle of honey. Great with soup or on its own.",
+    imageSrc: "/IMG_6335_VSCO.JPG",
     variants: [{ sku: "thyme-focaccia", shortLabel: "One loaf", priceDisplay: "$15" }],
   },
   {

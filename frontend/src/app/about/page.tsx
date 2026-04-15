@@ -23,25 +23,24 @@ export default function AboutPage() {
       <JsonLd data={aboutLd} />
 
       <section className="relative border-b border-black/5 bg-white/60 px-8 py-20 backdrop-blur-sm md:py-28">
-        <div className="mx-auto grid max-w-5xl items-center gap-16 md:grid-cols-2">
-          <div className="order-2 space-y-8 text-lg leading-relaxed text-gray-800 md:order-1">
-            <div className="space-y-3">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-black/55">About Bay&apos;s</p>
-              <h1 className="text-5xl font-serif italic text-black">Hi friend!</h1>
+        <h1 className="sr-only">About Bailey | Bay&apos;s Baked Goods</h1>
+        <div className="mx-auto grid max-w-5xl items-stretch gap-16 md:grid-cols-2">
+          <div className="relative flex justify-center">
+            <div className="relative w-full max-w-md overflow-hidden rounded-3xl shadow-2xl transition-transform duration-500 motion-safe:-rotate-2 motion-safe:hover:rotate-0">
+              <div className="relative aspect-[4/5] w-full max-h-[80vh]">
+                <Image
+                  src="/IMG_6712_VSCO.JPG"
+                  alt="Bailey, baker and founder of Bay's Baked Goods in West Jordan, Utah"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 448px"
+                  className="object-cover object-center"
+                  priority
+                />
+              </div>
             </div>
-            <p>
-              My name is Bailey. I married the love of my life, Kruz, in 2024, and we live in West
-              Jordan with our dog, Goose. Baking has been part of my life for as long as I can
-              remember, and sourdough made me fall even more in love with it.
-            </p>
-            <p>
-              After months of going back and forth, I decided the only way to know was to go for it.
-              Bay&apos;s Baked Goods is my small, order-based home bakery built around fresh bread,
-              cozy treats, and getting fresh, homemade baked goods to people who actually appreciate
-              them.
-            </p>
+            <div className="absolute -bottom-6 -left-6 -z-10 h-32 w-32 rounded-full bg-[#f5f3ec] opacity-60 blur-2xl" />
           </div>
-          <div className="order-1 relative flex justify-center md:order-2">
+          <div className="relative flex justify-center">
             <div className="relative w-full max-w-md overflow-hidden rounded-3xl shadow-2xl transition-transform duration-500 motion-safe:rotate-2 motion-safe:hover:rotate-0">
               <div className="relative aspect-[4/5] w-full max-h-[80vh]">
                 <Image
@@ -64,9 +63,9 @@ export default function AboutPage() {
           <div>
             <h2 className="font-serif text-3xl italic text-black">What Bailey bakes</h2>
             <p className="mt-4">
-              Sourdough is the heart of Bay&apos;s kitchen  -  boiled bagels, dimpled focaccia, swirled
-              cinnamon rolls, and brown butter chocolate chunk cookies round out the menu. Everything
-              is baked in small batches so it arrives fresh and full of flavor.
+              Sourdough is the heart of Bay&apos;s kitchen  -  bagels, focaccia, cinnamon rolls, and
+              brown butter chocolate chunk cookies round out the menu. Everything is baked in small
+              batches so it arrives fresh and full of flavor.
             </p>
           </div>
           <div>
