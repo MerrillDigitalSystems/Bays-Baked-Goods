@@ -42,11 +42,7 @@ export default function Home() {
                 Fresh sourdough, bagels, cinnamon rolls, and more  -  baked to order out of our West
                 Jordan kitchen.
               </p>
-              <p className="max-w-2xl text-lg leading-8 text-black/70 sm:text-xl">
-                Small-batch sourdough, focaccia, bagels, cinnamon rolls, and cookies, freshly baked
-                in West Jordan, Utah. Browse the menu, order online for signature items, or text
-                Bailey for custom bakes and special quantities.
-              </p>
+              
             </div>
 
             <div className="flex flex-col gap-4 sm:flex-row animate-fade-in-up animation-delay-400">

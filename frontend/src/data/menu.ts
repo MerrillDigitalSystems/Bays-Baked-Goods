@@ -84,6 +84,8 @@ export const checkoutProducts: {
   description: string;
   /** e.g. `/products/sourdough.webp`  -  omit or break to show placeholder */
   imageSrc?: string;
+  /** Passed to `object-position` with `object-cover` (e.g. `center 38%` to keep a tall subject in frame). */
+  imageObjectPosition?: string;
   variants: { sku: CheckoutSku; shortLabel: string; priceDisplay: string }[];
 }[] = [
   {
@@ -111,6 +113,7 @@ export const checkoutProducts: {
     title: "Cinnamon Sugar Sourdough",
     description: "Sourdough swirled with cinnamon sugar. Hard to eat just one slice.",
     imageSrc: "/IMG_6249_VSCO.JPG",
+    imageObjectPosition: "center 30%",
     variants: [
       { sku: "cinnamon-sugar-mini", shortLabel: "Mini", priceDisplay: "$6" },
       { sku: "cinnamon-sugar-regular", shortLabel: "Regular", priceDisplay: "$12" },

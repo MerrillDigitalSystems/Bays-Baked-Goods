@@ -9,6 +9,11 @@ import {
   checkoutProducts,
   type CheckoutSku,
 } from "@/data/menu";
+import {
+  PASS_THROUGH_CARD_FEES_ENABLED,
+  customerChargeTotalCents,
+  passThroughSurchargeCents,
+} from "@/lib/stripe-fees";
 
 type CartLine = { sku: CheckoutSku; quantity: number };
 type Fulfillment = "pickup" | "delivery";
@@ -49,11 +54,14 @@ function ProductImage({
   title,
   alt,
   cardIndex,
+  objectPosition,
 }: {
   src?: string;
   title: string;
   alt: string;
   cardIndex: number;
+  /** CSS `object-position` when using `object-cover`. */
+  objectPosition?: string;
 }) {
   const [failed, setFailed] = useState(false);
   const eager = cardIndex < 3;
@@ -68,6 +76,7 @@ function ProductImage({
       alt={alt}
       fill
       className="object-cover"
+      style={objectPosition ? { objectPosition } : undefined}
       sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
       loading={eager ? "eager" : "lazy"}
       priority={eager}
@@ -92,7 +101,9 @@ export function OrderCart() {
   );
 
   const deliveryFeeLine = fulfillment === "delivery" ? DELIVERY_FEE_CENTS : 0;
-  const totalCents = subtotalCents + deliveryFeeLine;
+  const netCents = subtotalCents + deliveryFeeLine;
+  const passThroughCents = useMemo(() => passThroughSurchargeCents(netCents), [netCents]);
+  const chargeTotalCents = useMemo(() => customerChargeTotalCents(netCents), [netCents]);
 
   function addSku(sku: CheckoutSku, qty: number) {
     setError(null);
@@ -125,7 +136,7 @@ export function OrderCart() {
     }
     setLoading(true);
     setError(null);
-    trackBeginCheckout(totalCents / 100);
+    trackBeginCheckout(chargeTotalCents / 100);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -181,6 +192,7 @@ export function OrderCart() {
                   title={product.title}
                   alt={productImageAlt(product.title)}
                   cardIndex={cardIndex}
+                  objectPosition={product.imageObjectPosition}
                 />
               </div>
               <div className="flex flex-1 flex-col p-5">
@@ -331,9 +343,16 @@ export function OrderCart() {
           </div>
         ) : null}
 
+        {PASS_THROUGH_CARD_FEES_ENABLED && cart.length > 0 && passThroughCents > 0 ? (
+          <div className="mt-3 flex justify-between border-t border-black/5 pt-3 text-sm text-black/75">
+            <span>Card processing (est.)</span>
+            <span>{formatMoney(passThroughCents)}</span>
+          </div>
+        ) : null}
+
         <div className="mt-6 flex items-center justify-between border-t border-black/10 pt-4 text-lg font-semibold">
           <span>Estimated total</span>
-          <span>{formatMoney(totalCents)}</span>
+          <span>{formatMoney(chargeTotalCents)}</span>
         </div>
 
         {error ? (
@@ -351,8 +370,9 @@ export function OrderCart() {
           {loading ? "Redirecting…" : "Pay securely with Stripe"}
         </button>
         <p className="mt-3 text-xs text-black/50">
-          You’ll complete payment on Stripe’s secure checkout page. A card processing fee may apply
-          per Stripe’s terms.
+          {PASS_THROUGH_CARD_FEES_ENABLED
+            ? "You’ll complete payment on Stripe’s secure checkout page. The total above includes an estimated card-processing line so menu prices match what the bakery receives after Stripe fees (actual Stripe fees may vary slightly by card)."
+            : "You’ll complete payment on Stripe’s secure checkout page. A card processing fee may apply per Stripe’s terms."}
         </p>
       </aside>
     </div>
