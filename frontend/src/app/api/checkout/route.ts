@@ -1,6 +1,11 @@
 import Stripe from "stripe";
 import { DELIVERY_FEE_CENTS } from "@/config/site";
 import { checkoutCatalog, type CheckoutSku } from "@/data/menu";
+import {
+  PASS_THROUGH_CARD_FEES_ENABLED,
+  grossChargeCentsFromNet,
+  passThroughSurchargeCents,
+} from "@/lib/stripe-fees";
 
 function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -74,6 +79,7 @@ export async function POST(request: Request) {
 
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
   const summaryLines: string[] = [];
+  let netCents = 0;
 
   for (const row of raw.items) {
     if (typeof row?.sku !== "string" || typeof row?.quantity !== "number") {
@@ -88,6 +94,7 @@ export async function POST(request: Request) {
       return Response.json({ error: `Quantity must be 1–${MAX_QTY} per line` }, { status: 400 });
     }
     const { label, unitAmount } = checkoutCatalog[sku];
+    netCents += unitAmount * q;
     lineItems.push({
       quantity: q,
       price_data: {
@@ -95,6 +102,7 @@ export async function POST(request: Request) {
         unit_amount: unitAmount,
         product_data: {
           name: label,
+          description: "Bay's Baked Goods — West Jordan, UT (menu item)",
         },
       },
     });
@@ -102,6 +110,7 @@ export async function POST(request: Request) {
   }
 
   if (fulfillment === "delivery") {
+    netCents += DELIVERY_FEE_CENTS;
     lineItems.push({
       quantity: 1,
       price_data: {
@@ -116,12 +125,36 @@ export async function POST(request: Request) {
     summaryLines.push(`${formatMoney(DELIVERY_FEE_CENTS)} local delivery`);
   }
 
+  const passThroughCents = PASS_THROUGH_CARD_FEES_ENABLED
+    ? passThroughSurchargeCents(netCents)
+    : 0;
+  if (passThroughCents > 0) {
+    lineItems.push({
+      quantity: 1,
+      price_data: {
+        currency: "usd",
+        unit_amount: passThroughCents,
+        product_data: {
+          name: "Card processing (estimated)",
+          description:
+            "Adjusts for Stripe card fees so menu prices match what the bakery keeps after processing.",
+        },
+      },
+    });
+    summaryLines.push(`${formatMoney(passThroughCents)} card processing (est.)`);
+  }
+
   const origin = baseUrl(request);
 
   const deliveryLine =
     fulfillment === "delivery"
       ? `${deliveryStreet}, ${deliveryCity} ${deliveryZip}`.slice(0, 450)
       : "";
+
+  const orderDescription = summaryLines.join(" · ").slice(0, 1000);
+  const grossForAudit = PASS_THROUGH_CARD_FEES_ENABLED
+    ? grossChargeCentsFromNet(netCents)
+    : netCents;
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -130,8 +163,27 @@ export async function POST(request: Request) {
     cancel_url: `${origin}/order/cancel`,
     phone_number_collection: { enabled: true },
     billing_address_collection: "required",
+    payment_intent_data: {
+      description: orderDescription,
+      metadata: {
+        order_summary: summaryLines.join("; ").slice(0, 450),
+        net_menu_total_cents: String(netCents),
+        charge_total_cents: String(grossForAudit),
+        fulfillment,
+        ...(fulfillment === "delivery"
+          ? {
+              delivery_street: deliveryStreet.slice(0, 500),
+              delivery_city: deliveryCity.slice(0, 500),
+              delivery_zip: deliveryZip.slice(0, 50),
+              delivery_line: deliveryLine,
+            }
+          : {}),
+      },
+    },
     metadata: {
       order_summary: summaryLines.join("; ").slice(0, 450),
+      net_menu_total_cents: String(netCents),
+      charge_total_cents: String(grossForAudit),
       fulfillment,
       ...(fulfillment === "delivery"
         ? {
@@ -142,6 +194,16 @@ export async function POST(request: Request) {
           }
         : {}),
     },
+    ...(process.env.STRIPE_CHECKOUT_CREATE_INVOICE === "true"
+      ? {
+          invoice_creation: {
+            enabled: true,
+            invoice_data: {
+              description: orderDescription.slice(0, 500),
+            },
+          },
+        }
+      : {}),
   });
 
   if (!session.url) {
