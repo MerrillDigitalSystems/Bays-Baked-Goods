@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
 import { bakerySchema } from "@/data/menu";
-import { jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
+import { breadcrumbJsonLd, jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "About Bailey | Bay's Baked Goods – West Jordan, Utah Home Bakery",
@@ -14,7 +14,11 @@ export const metadata: Metadata = pageMetadata({
 
 const aboutLd = jsonLdGraph(
   bakerySchema,
-  webPageJsonLd("/about", "About Bailey | Bay's Baked Goods – West Jordan, Utah Home Bakery")
+  webPageJsonLd("/about", "About Bailey | Bay's Baked Goods – West Jordan, Utah Home Bakery"),
+  breadcrumbJsonLd([
+    { name: "Home", path: "/" },
+    { name: "About", path: "/about" },
+  ])
 );
 
 export default function AboutPage() {

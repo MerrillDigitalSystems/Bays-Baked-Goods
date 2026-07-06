@@ -3,7 +3,7 @@ import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
 import { formatDeliveryFeeDisplay, ORDER_LEAD_TIME_DAYS } from "@/config/site";
 import { customMenuItems, getMenuItemListJsonLd, signatureMenuItems } from "@/data/menu";
-import { jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
+import { breadcrumbJsonLd, jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Menu & Pricing | Bay's Baked Goods – Sourdough, Bagels, Cinnamon Rolls & More",
@@ -17,7 +17,11 @@ const menuLd = jsonLdGraph(
   webPageJsonLd(
     "/menu",
     "Menu & Pricing | Bay's Baked Goods – Sourdough, Bagels, Cinnamon Rolls & More"
-  )
+  ),
+  breadcrumbJsonLd([
+    { name: "Home", path: "/" },
+    { name: "Menu", path: "/menu" },
+  ])
 );
 
 export default function MenuPage() {

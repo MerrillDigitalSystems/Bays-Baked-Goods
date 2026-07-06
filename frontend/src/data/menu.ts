@@ -157,24 +157,45 @@ export const checkoutProducts: {
   },
 ];
 
+const SITE_URL = "https://baysbakedgoods.com";
+
 export const bakerySchema = {
   "@context": "https://schema.org",
   "@type": "Bakery",
+  "@id": `${SITE_URL}/#bakery`,
   name: "Bay's Baked Goods",
-  url: "https://baysbakedgoods.com",
+  url: SITE_URL,
+  image: `${SITE_URL}/IMG_6761_VSCO.JPG`,
+  logo: `${SITE_URL}/logo.png`,
   telephone: "+18014503852",
+  priceRange: "$",
+  servesCuisine: "Bakery",
+  paymentAccepted: "Credit Card, Venmo",
+  currenciesAccepted: "USD",
+  founder: {
+    "@type": "Person",
+    name: "Bailey",
+  },
   address: {
     "@type": "PostalAddress",
     addressLocality: "West Jordan",
     addressRegion: "UT",
     addressCountry: "US",
   },
-  areaServed: {
-    "@type": "State",
-    name: "Utah",
+  geo: {
+    "@type": "GeoCoordinates",
+    latitude: 40.6097,
+    longitude: -111.9391,
   },
-  servesCuisine: "Bakery",
-  priceRange: "$",
+  areaServed: [
+    { "@type": "City", name: "West Jordan" },
+    { "@type": "City", name: "South Jordan" },
+    { "@type": "City", name: "Riverton" },
+    { "@type": "City", name: "Herriman" },
+    { "@type": "City", name: "Salt Lake City" },
+    { "@type": "State", name: "Utah" },
+  ],
+  hasMenu: `${SITE_URL}/menu`,
   description:
     "Order-based home bakery in West Jordan, Utah specializing in fresh sourdough, bagels, focaccia, cinnamon rolls, and custom bakes. Pickup in West Jordan and local delivery to surrounding areas  -  text to confirm delivery availability.",
   sameAs: [
@@ -183,30 +204,68 @@ export const bakerySchema = {
   ],
   potentialAction: {
     "@type": "OrderAction",
-    target: "https://baysbakedgoods.com/order",
+    target: `${SITE_URL}/order`,
   },
 };
+
+/**
+ * Numeric price points + representative photo per signature item.
+ * Single source for valid Product structured data (Google needs a numeric
+ * `price`/`lowPrice` and an `image`  -  a price string in `description` is rejected).
+ */
+const menuSchemaMeta: Record<string, { prices: number[]; image: string }> = {
+  "Plain Sourdough": { prices: [5, 10], image: "/IMG_6002_VSCO.JPG" },
+  "Jalapeno Cheddar Sourdough": { prices: [6, 12], image: "/IMG_5967_VSCO.JPG" },
+  "Cinnamon Sugar Sourdough": { prices: [6, 12], image: "/IMG_6249_VSCO.JPG" },
+  "Plain Bagels": {
+    prices: [8, 16],
+    image: "/2BD15450-2976-4311-A7ED-7117767DF9FC_VSCO.JPG",
+  },
+  "Thyme & Honey Focaccia": { prices: [15], image: "/IMG_6335_VSCO.JPG" },
+  "Cinnamon Rolls": { prices: [12, 24], image: "/IMG_6761_VSCO.JPG" },
+  "Brown Butter Choc Chunk Cookies": { prices: [8, 16], image: "/IMG_6761_VSCO.JPG" },
+};
+
+/** A single Offer for one-price items, AggregateOffer for items with size tiers. */
+function buildOffer(prices: number[]) {
+  const common = {
+    priceCurrency: "USD",
+    availability: "https://schema.org/InStock",
+    url: `${SITE_URL}/order`,
+  };
+  if (prices.length === 1) {
+    return { "@type": "Offer", ...common, price: prices[0].toFixed(2) };
+  }
+  return {
+    "@type": "AggregateOffer",
+    ...common,
+    lowPrice: Math.min(...prices).toFixed(2),
+    highPrice: Math.max(...prices).toFixed(2),
+    offerCount: prices.length,
+  };
+}
 
 /** ItemList + Product entries for signature menu (menu page). */
 export function getMenuItemListJsonLd() {
   return {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    itemListElement: signatureMenuItems.map((item, index) => ({
-      "@type": "ListItem",
-      position: index + 1,
-      item: {
-        "@type": "Product",
-        name: item.name,
-        description: `${item.name}  -  handmade at Bay's Baked Goods, West Jordan, Utah.`,
-        offers: {
-          "@type": "Offer",
-          priceCurrency: "USD",
-          availability: "https://schema.org/PreOrder",
-          url: "https://baysbakedgoods.com/order",
-          description: item.price,
+    itemListElement: signatureMenuItems.map((item, index) => {
+      const meta = menuSchemaMeta[item.name];
+      const prices = meta ? meta.prices : [];
+      return {
+        "@type": "ListItem",
+        position: index + 1,
+        item: {
+          "@type": "Product",
+          name: item.name,
+          description: `${item.name}  -  handmade in small batches at Bay's Baked Goods, a home bakery in West Jordan, Utah.`,
+          image: `${SITE_URL}${meta ? meta.image : "/logo.png"}`,
+          brand: { "@type": "Brand", name: "Bay's Baked Goods" },
+          category: "Bakery",
+          offers: buildOffer(prices),
         },
-      },
-    })),
+      };
+    }),
   };
 }

@@ -16,6 +16,21 @@ export function webPageJsonLd(path: string, title: string) {
   };
 }
 
+/** BreadcrumbList for a page's position in the site hierarchy (SERP breadcrumbs). */
+export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
+  const base = "https://baysbakedgoods.com";
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((it, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: it.name,
+      item: it.path === "/" ? `${base}/` : `${base}${it.path}`,
+    })),
+  };
+}
+
 /** Combine entities; strips nested `@context` so a single root context applies. */
 export function jsonLdGraph(...items: object[]) {
   return {

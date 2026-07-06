@@ -4,7 +4,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { formatDeliveryFeeDisplay } from "@/config/site";
 import { bakerySchema } from "@/data/menu";
 import { faqSmsIntro, getFaqEntries, getFaqPageJsonLd } from "@/data/faq";
-import { jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
+import { breadcrumbJsonLd, jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Contact & Order | Bay's Baked Goods – Text or Order Online",
@@ -16,7 +16,11 @@ export const metadata: Metadata = pageMetadata({
 const contactLd = jsonLdGraph(
   bakerySchema,
   webPageJsonLd("/contact", "Contact & Order | Bay's Baked Goods – Text or Order Online"),
-  getFaqPageJsonLd()
+  getFaqPageJsonLd(),
+  breadcrumbJsonLd([
+    { name: "Home", path: "/" },
+    { name: "Contact", path: "/contact" },
+  ])
 );
 
 export default function ContactPage() {

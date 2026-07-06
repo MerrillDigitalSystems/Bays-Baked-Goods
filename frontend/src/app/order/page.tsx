@@ -4,7 +4,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { OrderCart } from "@/components/OrderCart";
 import { formatLeadTimeNotice } from "@/config/site";
 import { bakerySchema } from "@/data/menu";
-import { jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
+import { breadcrumbJsonLd, jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Order Online | Bay's Baked Goods – Fresh Artisan Bread & Treats, West Jordan UT",
@@ -18,7 +18,11 @@ const orderLd = jsonLdGraph(
   webPageJsonLd(
     "/order",
     "Order Online | Bay's Baked Goods – Fresh Artisan Bread & Treats, West Jordan UT"
-  )
+  ),
+  breadcrumbJsonLd([
+    { name: "Home", path: "/" },
+    { name: "Order", path: "/order" },
+  ])
 );
 
 export default function OrderPage() {
