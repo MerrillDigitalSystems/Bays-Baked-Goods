@@ -1,15 +1,26 @@
-/** Display-only menu (includes custom pricing ranges). */
+/** Display-only menu (includes custom pricing ranges). `slug` links to the product detail page. */
 export const signatureMenuItems = [
-  { name: "Plain Sourdough", size: "Mini / Regular", price: "$5 / $10" },
-  { name: "Jalapeno Cheddar Sourdough", size: "Mini / Regular", price: "$6 / $12" },
-  { name: "Cinnamon Sugar Sourdough", size: "Mini / Regular", price: "$6 / $12" },
-  { name: "Plain Bagels", size: "4 Pack / 8 Pack", price: "$8 / $16" },
-  { name: "Thyme & Honey Focaccia", size: null, price: "$15" },
-  { name: "Cinnamon Rolls", size: "4 Jumbo / 8 Jumbo", price: "$12 / $24" },
+  { name: "Plain Sourdough", size: "Mini / Regular", price: "$5 / $10", slug: "plain-sourdough" },
+  {
+    name: "Jalapeno Cheddar Sourdough",
+    size: "Mini / Regular",
+    price: "$6 / $12",
+    slug: "jalapeno-cheddar",
+  },
+  {
+    name: "Cinnamon Sugar Sourdough",
+    size: "Mini / Regular",
+    price: "$6 / $12",
+    slug: "cinnamon-sugar",
+  },
+  { name: "Plain Bagels", size: "4 Pack / 8 Pack", price: "$8 / $16", slug: "plain-bagels" },
+  { name: "Thyme & Honey Focaccia", size: null, price: "$15", slug: "thyme-focaccia" },
+  { name: "Cinnamon Rolls", size: "4 Jumbo / 8 Jumbo", price: "$12 / $24", slug: "cinnamon-rolls" },
   {
     name: "Brown Butter Choc Chunk Cookies",
     size: "4 Jumbo / 8 Jumbo",
     price: "$8 / $16",
+    slug: "choc-chunk-cookies",
   },
 ] as const;
 
@@ -86,6 +97,12 @@ export const checkoutProducts: {
   imageSrc?: string;
   /** Passed to `object-position` with `object-cover` (e.g. `center 38%` to keep a tall subject in frame). */
   imageObjectPosition?: string;
+  /**
+   * Common allergens present in this item, shown on the product detail page.
+   * SAFETY: verify with Bailey before relying on these  -  home-kitchen recipes and
+   * cross-contamination vary. Empty array = no common allergens listed.
+   */
+  allergens: string[];
   variants: { sku: CheckoutSku; shortLabel: string; priceDisplay: string }[];
 }[] = [
   {
@@ -93,6 +110,7 @@ export const checkoutProducts: {
     title: "Plain Sourdough",
     description: "Classic sourdough with a chewy crumb and crispy crust. Good for everything.",
     imageSrc: "/IMG_6002_VSCO.JPG",
+    allergens: ["Wheat", "Gluten"],
     variants: [
       { sku: "plain-sourdough-mini", shortLabel: "Mini", priceDisplay: "$5" },
       { sku: "plain-sourdough-regular", shortLabel: "Regular", priceDisplay: "$10" },
@@ -103,6 +121,7 @@ export const checkoutProducts: {
     title: "Jalapeño Cheddar Sourdough",
     description: "A little heat and sharp cheddar baked into every slice.",
     imageSrc: "/IMG_5967_VSCO.JPG",
+    allergens: ["Wheat", "Gluten", "Milk"],
     variants: [
       { sku: "jalapeno-mini", shortLabel: "Mini", priceDisplay: "$6" },
       { sku: "jalapeno-regular", shortLabel: "Regular", priceDisplay: "$12" },
@@ -114,6 +133,7 @@ export const checkoutProducts: {
     description: "Sourdough swirled with cinnamon sugar. Hard to eat just one slice.",
     imageSrc: "/IMG_6249_VSCO.JPG",
     imageObjectPosition: "center 30%",
+    allergens: ["Wheat", "Gluten"],
     variants: [
       { sku: "cinnamon-sugar-mini", shortLabel: "Mini", priceDisplay: "$6" },
       { sku: "cinnamon-sugar-regular", shortLabel: "Regular", priceDisplay: "$12" },
@@ -124,6 +144,7 @@ export const checkoutProducts: {
     title: "Plain Bagels",
     description: "Chewy, boiled bagels  -  perfect with cream cheese or your favorite spread.",
     imageSrc: "/2BD15450-2976-4311-A7ED-7117767DF9FC_VSCO.JPG",
+    allergens: ["Wheat", "Gluten"],
     variants: [
       { sku: "plain-bagels-4", shortLabel: "4 pack", priceDisplay: "$8" },
       { sku: "plain-bagels-8", shortLabel: "8 pack", priceDisplay: "$16" },
@@ -135,12 +156,14 @@ export const checkoutProducts: {
     description:
       "Dimpled focaccia with thyme and a drizzle of honey. Great with soup or on its own.",
     imageSrc: "/IMG_6335_VSCO.JPG",
+    allergens: ["Wheat", "Gluten"],
     variants: [{ sku: "thyme-focaccia", shortLabel: "One loaf", priceDisplay: "$15" }],
   },
   {
     id: "cinnamon-rolls",
     title: "Cinnamon Rolls",
     description: "Jumbo cinnamon rolls. Bailey's most-requested item.",
+    allergens: ["Wheat", "Gluten", "Milk", "Eggs"],
     variants: [
       { sku: "cinnamon-rolls-4", shortLabel: "4 jumbo", priceDisplay: "$12" },
       { sku: "cinnamon-rolls-8", shortLabel: "8 jumbo", priceDisplay: "$24" },
@@ -150,6 +173,7 @@ export const checkoutProducts: {
     id: "choc-chunk-cookies",
     title: "Brown Butter Choc Chunk Cookies",
     description: "Rich brown butter dough loaded with chocolate chunks.",
+    allergens: ["Wheat", "Gluten", "Milk", "Eggs", "Soy"],
     variants: [
       { sku: "cookies-4", shortLabel: "4 jumbo", priceDisplay: "$8" },
       { sku: "cookies-8", shortLabel: "8 jumbo", priceDisplay: "$16" },
@@ -242,6 +266,32 @@ function buildOffer(prices: number[]) {
     lowPrice: Math.min(...prices).toFixed(2),
     highPrice: Math.max(...prices).toFixed(2),
     offerCount: prices.length,
+  };
+}
+
+export type CheckoutProduct = (typeof checkoutProducts)[number];
+
+/** Find a product-detail entry by its URL slug (`checkoutProducts[].id`). */
+export function getProductBySlug(slug: string): CheckoutProduct | undefined {
+  return checkoutProducts.find((p) => p.id === slug);
+}
+
+/** Numeric USD prices for a product, sourced from the server-validated checkout catalog. */
+function productPrices(product: CheckoutProduct): number[] {
+  return product.variants.map((v) => checkoutCatalog[v.sku].unitAmount / 100);
+}
+
+/** Product structured data for a single product detail page. */
+export function getProductDetailJsonLd(product: CheckoutProduct) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.title,
+    description: product.description,
+    image: `${SITE_URL}${product.imageSrc ?? "/logo.png"}`,
+    brand: { "@type": "Brand", name: "Bay's Baked Goods" },
+    category: "Bakery",
+    offers: buildOffer(productPrices(product)),
   };
 }
 

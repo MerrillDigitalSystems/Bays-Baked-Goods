@@ -54,8 +54,11 @@ export function pageMetadata(opts: {
   title: string;
   description: string;
   canonicalPath: string;
+  /** Optional page-specific social image (e.g. a product photo). Falls back to the logo. */
+  imagePath?: string;
 }): Metadata {
-  const { title, description, canonicalPath } = opts;
+  const { title, description, canonicalPath, imagePath } = opts;
+  const images = imagePath ? [{ url: imagePath }] : [ogImage];
   return {
     title: { absolute: title },
     description,
@@ -66,14 +69,14 @@ export function pageMetadata(opts: {
       type: "website",
       url: canonicalPath,
       siteName: "Bay's Baked Goods",
-      images: [ogImage],
+      images,
       locale: "en_US",
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: ["/logo.png"],
+      images: [imagePath ?? "/logo.png"],
     },
   };
 }

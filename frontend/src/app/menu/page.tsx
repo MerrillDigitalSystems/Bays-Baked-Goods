@@ -69,7 +69,14 @@ export default function MenuPage() {
             {signatureMenuItems.map((item) => (
               <div key={item.name} className="group">
                 <div className="flex items-end justify-between gap-6 border-b border-black/5 pb-4 transition-colors group-hover:border-black/20">
-                  <h2 className="max-w-xl text-xl font-medium sm:text-2xl">{item.name}</h2>
+                  <h2 className="max-w-xl text-xl font-medium sm:text-2xl">
+                    <Link
+                      href={`/menu/${item.slug}`}
+                      className="transition-colors hover:text-black/60 hover:underline underline-offset-4"
+                    >
+                      {item.name}
+                    </Link>
+                  </h2>
                   <div className="shrink-0 text-right">
                     {item.size ? (
                       <span className="mb-1 block text-xs uppercase tracking-wider text-gray-500">
