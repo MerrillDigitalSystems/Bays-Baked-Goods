@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
 import { formatDeliveryFeeDisplay, ORDER_LEAD_TIME_DAYS } from "@/config/site";
-import { customMenuItems, getMenuItemListJsonLd, signatureMenuItems } from "@/data/menu";
+import {
+  customMenuItems,
+  getMenuItemListJsonLd,
+  getProductBySlug,
+  signatureMenuItems,
+} from "@/data/menu";
 import { breadcrumbJsonLd, jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
@@ -68,29 +74,55 @@ export default function MenuPage() {
         </div>
 
         <div className="space-y-20">
-          <div className="space-y-10">
-            {signatureMenuItems.map((item) => (
-              <div key={item.name} className="group">
-                <div className="flex items-end justify-between gap-6 border-b border-black/5 pb-4 transition-colors group-hover:border-black/20">
-                  <h2 className="max-w-xl text-xl font-medium sm:text-2xl">
-                    <Link
-                      href={`/menu/${item.slug}`}
-                      className="transition-colors hover:text-black/60 hover:underline underline-offset-4"
-                    >
+          {/* People buy food with their eyes, so the menu leads with the photo
+              rather than reading as a price list. */}
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {signatureMenuItems.map((item) => {
+              const product = getProductBySlug(item.slug);
+              return (
+                <Link
+                  key={item.name}
+                  href={`/menu/${item.slug}`}
+                  className="group flex flex-col overflow-hidden rounded-[1.5rem] border border-black/8 bg-white/55 shadow-[0_16px_48px_rgba(0,0,0,0.05)] transition hover:border-black/15 hover:shadow-lg"
+                >
+                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#f5f3ec]">
+                    {product?.imageSrc ? (
+                      <Image
+                        src={product.imageSrc}
+                        alt={`${item.name} from Bay's Baked Goods, West Jordan, Utah`}
+                        fill
+                        sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw"
+                        className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.03]"
+                        style={
+                          product.imageObjectPosition
+                            ? { objectPosition: product.imageObjectPosition }
+                            : undefined
+                        }
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center p-6 text-center">
+                        <span className="font-serif text-base italic text-black/40">
+                          Photo coming soon
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col p-6">
+                    <h2 className="text-xl font-medium text-black underline-offset-4 group-hover:underline">
                       {item.name}
-                    </Link>
-                  </h2>
-                  <div className="shrink-0 text-right">
+                    </h2>
                     {item.size ? (
-                      <span className="mb-1 block text-xs uppercase tracking-wider text-gray-500">
+                      <span className="mt-1 text-xs uppercase tracking-wider text-gray-500">
                         {item.size}
                       </span>
                     ) : null}
-                    <span className="text-xl font-medium sm:text-2xl">{item.price}</span>
+                    <span className="mt-auto pt-4 text-xl font-medium text-black">
+                      {item.price}
+                    </span>
                   </div>
-                </div>
-              </div>
-            ))}
+                </Link>
+              );
+            })}
           </div>
 
           <div className="rounded-[2rem] border border-black/8 bg-white/45 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.05)] sm:p-10">
@@ -100,7 +132,14 @@ export default function MenuPage() {
               </p>
               <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">Make Your Own</h2>
               <p className="mx-auto mt-4 max-w-xl text-black/70">
-                Text Bailey to order these items  -  pricing depends on inclusions.
+                Text Bailey to order these items  -  pricing depends on inclusions. See{" "}
+                <Link
+                  href="/custom-orders"
+                  className="underline underline-offset-4 hover:text-black"
+                >
+                  how custom orders work
+                </Link>
+                .
               </p>
             </div>
 
