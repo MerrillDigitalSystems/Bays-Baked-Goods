@@ -43,22 +43,36 @@ export function jsonLdGraph(...items: object[]) {
   };
 }
 
-const ogImage = {
-  url: "/logo.png",
-  width: 1200,
-  height: 630,
-} as const;
+/**
+ * Share images live in `public/og/` and are always a real 1200x630 food photo,
+ * never the square logo  -  for a bakery the share preview is the product shot.
+ * Regenerate with `node scripts/generate-og-images.mjs`.
+ */
+const OG_WIDTH = 1200;
+const OG_HEIGHT = 630;
+const DEFAULT_OG_PATH = "/og/default.jpg";
+const DEFAULT_OG_ALT =
+  "A freshly baked sourdough boule with a scored crust from Bay's Baked Goods in West Jordan, Utah";
 
 /** Canonical paths only; metadataBase in root layout completes full URLs. */
 export function pageMetadata(opts: {
   title: string;
   description: string;
   canonicalPath: string;
-  /** Optional page-specific social image (e.g. a product photo). Falls back to the logo. */
-  imagePath?: string;
+  /** 1200x630 image under `public/og/` (e.g. `/og/menu.jpg`). Defaults to the sourdough boule. */
+  ogImagePath?: string;
+  /** Describes the share image for screen readers and link previews. */
+  ogImageAlt?: string;
 }): Metadata {
-  const { title, description, canonicalPath, imagePath } = opts;
-  const images = imagePath ? [{ url: imagePath }] : [ogImage];
+  const { title, description, canonicalPath, ogImagePath, ogImageAlt } = opts;
+  const images = [
+    {
+      url: ogImagePath ?? DEFAULT_OG_PATH,
+      width: OG_WIDTH,
+      height: OG_HEIGHT,
+      alt: ogImageAlt ?? DEFAULT_OG_ALT,
+    },
+  ];
   return {
     title: { absolute: title },
     description,
@@ -76,7 +90,7 @@ export function pageMetadata(opts: {
       card: "summary_large_image",
       title,
       description,
-      images: [imagePath ?? "/logo.png"],
+      images,
     },
   };
 }

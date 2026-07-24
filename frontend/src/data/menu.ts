@@ -142,7 +142,7 @@ export const checkoutProducts: {
   {
     id: "plain-bagels",
     title: "Plain Bagels",
-    description: "Chewy, boiled bagels  -  perfect with cream cheese or your favorite spread.",
+    description: "Chewy, boiled bagels - perfect with cream cheese or your favorite spread.",
     imageSrc: "/2BD15450-2976-4311-A7ED-7117767DF9FC_VSCO.JPG",
     allergens: ["Wheat", "Gluten"],
     variants: [
@@ -173,6 +173,7 @@ export const checkoutProducts: {
     id: "choc-chunk-cookies",
     title: "Brown Butter Choc Chunk Cookies",
     description: "Rich brown butter dough loaded with chocolate chunks.",
+    imageSrc: "/3E6348C5-1BEA-4652-9DCF-CAF1B46CEE46.jpeg",
     allergens: ["Wheat", "Gluten", "Milk", "Eggs", "Soy"],
     variants: [
       { sku: "cookies-4", shortLabel: "4 jumbo", priceDisplay: "$8" },
@@ -189,7 +190,9 @@ export const bakerySchema = {
   "@id": `${SITE_URL}/#bakery`,
   name: "Bay's Baked Goods",
   url: SITE_URL,
-  image: `${SITE_URL}/IMG_6761_VSCO.JPG`,
+  // Product photography, not the owner portrait  -  this is what feeds the map
+  // pack and local AI answers. Two aspect ratios per Google's guidance.
+  image: [`${SITE_URL}/og/default.jpg`, `${SITE_URL}/IMG_6002_VSCO.JPG`],
   logo: `${SITE_URL}/logo.png`,
   telephone: "+18014503852",
   priceRange: "$",
@@ -221,7 +224,7 @@ export const bakerySchema = {
   ],
   hasMenu: `${SITE_URL}/menu`,
   description:
-    "Order-based home bakery in West Jordan, Utah specializing in fresh sourdough, bagels, focaccia, cinnamon rolls, and custom bakes. Pickup in West Jordan and local delivery to surrounding areas  -  text to confirm delivery availability.",
+    "Order-based home bakery in West Jordan, Utah specializing in fresh sourdough, bagels, focaccia, cinnamon rolls, and custom bakes. Pickup in West Jordan and local delivery to surrounding areas - text to confirm delivery availability.",
   sameAs: [
     "https://www.facebook.com/profile.php?id=61587904335534",
     "https://www.instagram.com/bays.bakedgoods",
@@ -236,8 +239,12 @@ export const bakerySchema = {
  * Numeric price points + representative photo per signature item.
  * Single source for valid Product structured data (Google needs a numeric
  * `price`/`lowPrice` and an `image`  -  a price string in `description` is rejected).
+ *
+ * `image` is optional on purpose: an item with no photo of its own emits no
+ * `image` at all rather than borrowing an unrelated one. A wrong product image
+ * is worse than a missing one  -  it is misleading, and Google can flag it.
  */
-const menuSchemaMeta: Record<string, { prices: number[]; image: string }> = {
+const menuSchemaMeta: Record<string, { prices: number[]; image?: string }> = {
   "Plain Sourdough": { prices: [5, 10], image: "/IMG_6002_VSCO.JPG" },
   "Jalapeno Cheddar Sourdough": { prices: [6, 12], image: "/IMG_5967_VSCO.JPG" },
   "Cinnamon Sugar Sourdough": { prices: [6, 12], image: "/IMG_6249_VSCO.JPG" },
@@ -246,17 +253,26 @@ const menuSchemaMeta: Record<string, { prices: number[]; image: string }> = {
     image: "/2BD15450-2976-4311-A7ED-7117767DF9FC_VSCO.JPG",
   },
   "Thyme & Honey Focaccia": { prices: [15], image: "/IMG_6335_VSCO.JPG" },
-  "Cinnamon Rolls": { prices: [12, 24], image: "/IMG_6761_VSCO.JPG" },
-  "Brown Butter Choc Chunk Cookies": { prices: [8, 16], image: "/IMG_6761_VSCO.JPG" },
+  // No photo of the cinnamon rolls exists yet  -  add one here once shot.
+  "Cinnamon Rolls": { prices: [12, 24] },
+  "Brown Butter Choc Chunk Cookies": {
+    prices: [8, 16],
+    image: "/3E6348C5-1BEA-4652-9DCF-CAF1B46CEE46.jpeg",
+  },
 };
 
-/** A single Offer for one-price items, AggregateOffer for items with size tiers. */
+/**
+ * A single Offer for one-price items, AggregateOffer for items with size tiers.
+ * Returns null when there are no prices, so callers omit `offers` entirely
+ * rather than emitting `Math.min()` of nothing as an Infinity price.
+ */
 function buildOffer(prices: number[]) {
   const common = {
     priceCurrency: "USD",
     availability: "https://schema.org/InStock",
     url: `${SITE_URL}/order`,
   };
+  if (prices.length === 0) return null;
   if (prices.length === 1) {
     return { "@type": "Offer", ...common, price: prices[0].toFixed(2) };
   }
@@ -283,15 +299,16 @@ function productPrices(product: CheckoutProduct): number[] {
 
 /** Product structured data for a single product detail page. */
 export function getProductDetailJsonLd(product: CheckoutProduct) {
+  const offers = buildOffer(productPrices(product));
   return {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.title,
     description: product.description,
-    image: `${SITE_URL}${product.imageSrc ?? "/logo.png"}`,
+    ...(product.imageSrc ? { image: `${SITE_URL}${product.imageSrc}` } : {}),
     brand: { "@type": "Brand", name: "Bay's Baked Goods" },
     category: "Bakery",
-    offers: buildOffer(productPrices(product)),
+    ...(offers ? { offers } : {}),
   };
 }
 
@@ -302,18 +319,18 @@ export function getMenuItemListJsonLd() {
     "@type": "ItemList",
     itemListElement: signatureMenuItems.map((item, index) => {
       const meta = menuSchemaMeta[item.name];
-      const prices = meta ? meta.prices : [];
+      const offers = buildOffer(meta ? meta.prices : []);
       return {
         "@type": "ListItem",
         position: index + 1,
         item: {
           "@type": "Product",
           name: item.name,
-          description: `${item.name}  -  handmade in small batches at Bay's Baked Goods, a home bakery in West Jordan, Utah.`,
-          image: `${SITE_URL}${meta ? meta.image : "/logo.png"}`,
+          description: `${item.name} - handmade in small batches at Bay's Baked Goods, a home bakery in West Jordan, Utah.`,
+          ...(meta?.image ? { image: `${SITE_URL}${meta.image}` } : {}),
           brand: { "@type": "Brand", name: "Bay's Baked Goods" },
           category: "Bakery",
-          offers: buildOffer(prices),
+          ...(offers ? { offers } : {}),
         },
       };
     }),

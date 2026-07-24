@@ -13,8 +13,6 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://baysbakedgoods.com"),
   applicationName: "Bay's Baked Goods",
   category: "food",
-  keywords:
-    "bakery, sourdough, focaccia, West Jordan, Utah, artisan bread, sweet treats, cookies, cinnamon rolls, bagels",
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",

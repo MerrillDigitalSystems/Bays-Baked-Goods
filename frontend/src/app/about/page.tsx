@@ -8,8 +8,11 @@ import { breadcrumbJsonLd, jsonLdGraph, pageMetadata, webPageJsonLd } from "@/li
 export const metadata: Metadata = pageMetadata({
   title: "About Bailey | Bay's Baked Goods – West Jordan, Utah Home Bakery",
   description:
-    "Meet Bailey  -  the baker behind Bay's Baked Goods. A small, order-based home bakery in West Jordan, Utah built around fresh bread, cozy treats, and homemade goodness.",
+    "Meet Bailey - the baker behind Bay's Baked Goods. A small, order-based home bakery in West Jordan, Utah built around fresh bread, cozy treats, and homemade goodness.",
   canonicalPath: "/about",
+  ogImagePath: "/og/about.jpg",
+  ogImageAlt:
+    "Bailey, founder of Bay's Baked Goods, holding a Bay's Baked Goods bag in her West Jordan, Utah kitchen",
 });
 
 const aboutLd = jsonLdGraph(

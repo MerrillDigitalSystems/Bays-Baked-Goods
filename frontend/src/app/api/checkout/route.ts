@@ -118,7 +118,7 @@ export async function POST(request: Request) {
         unit_amount: DELIVERY_FEE_CENTS,
         product_data: {
           name: "Local delivery",
-          description: "West Jordan area  -  confirm zone by text if needed",
+          description: "West Jordan area - confirm zone by text if needed",
         },
       },
     });

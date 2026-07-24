@@ -11,6 +11,9 @@ export const metadata: Metadata = pageMetadata({
   description:
     "Order fresh baked goods online from Bay's Baked Goods in West Jordan, Utah. Pay signature menu items with Stripe; custom Make Your Own orders by text with Bailey via Venmo.",
   canonicalPath: "/order",
+  ogImagePath: "/og/order.jpg",
+  ogImageAlt:
+    "A stack of brown butter chocolate chunk cookies from Bay's Baked Goods in West Jordan, Utah",
 });
 
 const orderLd = jsonLdGraph(

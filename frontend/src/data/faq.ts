@@ -27,7 +27,7 @@ export function getFaqEntries() {
     {
       question: "Do you ship?",
       answer:
-        "Not currently  -  Bay's is a local West Jordan bakery. Follow on Instagram or Facebook for updates.",
+        "Not currently - Bay's is a local West Jordan bakery. Follow on Instagram or Facebook for updates.",
     },
   ];
 }

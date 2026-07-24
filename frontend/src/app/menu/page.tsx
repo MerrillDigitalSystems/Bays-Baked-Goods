@@ -8,8 +8,11 @@ import { breadcrumbJsonLd, jsonLdGraph, pageMetadata, webPageJsonLd } from "@/li
 export const metadata: Metadata = pageMetadata({
   title: "Menu & Pricing | Bay's Baked Goods – Sourdough, Bagels, Cinnamon Rolls & More",
   description:
-    "Browse Bay's Baked Goods full menu  -  plain and specialty sourdough, bagels, focaccia, cinnamon rolls, cookies, and custom Make Your Own options. Prices listed for all items.",
+    "Browse Bay's Baked Goods full menu - plain and specialty sourdough, bagels, focaccia, cinnamon rolls, cookies, and custom Make Your Own options. Prices listed for all items.",
   canonicalPath: "/menu",
+  ogImagePath: "/og/menu.jpg",
+  ogImageAlt:
+    "Sliced thyme and honey focaccia on a wooden board from Bay's Baked Goods in West Jordan, Utah",
 });
 
 const menuLd = jsonLdGraph(

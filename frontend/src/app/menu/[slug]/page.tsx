@@ -29,7 +29,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${product.title} | Bay's Baked Goods – West Jordan, Utah`,
     description: `${product.description} Order ${product.title.toLowerCase()} online from Bay's Baked Goods, a home bakery in West Jordan, Utah.`,
     canonicalPath: `/menu/${product.id}`,
-    imagePath: product.imageSrc,
+    // `public/og/<id>.jpg` exists for every product that has a photo; the rest
+    // fall back to the default sourdough share image (see generate-og-images.mjs).
+    ogImagePath: product.imageSrc ? `/og/${product.id}.jpg` : undefined,
+    ogImageAlt: product.imageSrc
+      ? `${product.title} from Bay's Baked Goods in West Jordan, Utah`
+      : undefined,
   });
 }
 
