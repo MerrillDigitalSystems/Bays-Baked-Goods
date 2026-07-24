@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
+import { formatDeliveryFeeDisplay, ORDER_LEAD_TIME_DAYS } from "@/config/site";
 import { bakerySchema } from "@/data/menu";
 import { jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
 
@@ -21,6 +22,7 @@ const homeJsonLd = jsonLdGraph(
 );
 
 export default function Home() {
+  const deliveryFee = formatDeliveryFeeDisplay();
   return (
     <main className="flex-grow">
       <JsonLd data={homeJsonLd} />
@@ -45,41 +47,44 @@ export default function Home() {
               
             </div>
 
-            <div className="flex flex-col gap-4 sm:flex-row animate-fade-in-up animation-delay-400">
-              <Link
-                href="/menu"
-                className="inline-flex items-center justify-center rounded-full bg-[#1a1a1a] px-10 py-4 text-lg font-medium text-white shadow-xl transition-all duration-300 hover:scale-[1.02] hover:bg-black hover:shadow-2xl"
-              >
-                View menu
-              </Link>
+            <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center animate-fade-in-up animation-delay-400">
               <Link
                 href="/order"
-                className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white/70 px-10 py-4 text-lg font-medium text-black transition-all duration-300 hover:border-black/20 hover:bg-white"
+                className="inline-flex items-center justify-center rounded-full bg-[#1a1a1a] px-10 py-4 text-lg font-medium text-white shadow-xl transition-all duration-300 hover:scale-[1.02] hover:bg-black hover:shadow-2xl"
               >
                 Order online
               </Link>
-              <a
-                href="sms:8014503852"
-                className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white/70 px-10 py-4 text-lg font-medium text-black transition-all duration-300 hover:border-black/20 hover:bg-white"
-              >
-                Text to order
-              </a>
+              <div className="flex items-center gap-6 text-base">
+                <Link
+                  href="/menu"
+                  className="underline underline-offset-4 text-black/75 transition-colors hover:text-black"
+                >
+                  View the menu
+                </Link>
+                <a
+                  href="sms:8014503852"
+                  className="underline underline-offset-4 text-black/75 transition-colors hover:text-black"
+                >
+                  Text Bailey
+                </a>
+              </div>
             </div>
 
-            <div className="grid gap-4 pt-4 text-left text-sm text-black/65 sm:grid-cols-3 animate-fade-in-up animation-delay-400">
-              <div className="rounded-2xl border border-black/8 bg-white/45 p-4">
-                <p className="font-semibold text-black">Order-based baking</p>
-                <p>Freshly made in small batches.</p>
-              </div>
-              <div className="rounded-2xl border border-black/8 bg-white/45 p-4">
-                <p className="font-semibold text-black">Pickup or local delivery</p>
-                <p>West Jordan, Utah and surrounding areas.</p>
-              </div>
-              <div className="rounded-2xl border border-black/8 bg-white/45 p-4">
-                <p className="font-semibold text-black">Custom quantities</p>
-                <p>Ask about more or less than the menu.</p>
-              </div>
-            </div>
+            {/* The lead time and delivery fee decide whether someone can order at
+                all, so they belong beside the CTA rather than deep in the menu copy. */}
+            <ul className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-2 text-sm text-black/70 animate-fade-in-up animation-delay-400">
+              <li>Baked fresh to order</li>
+              <li aria-hidden="true" className="text-black/25">
+                &middot;
+              </li>
+              <li>{ORDER_LEAD_TIME_DAYS} days notice</li>
+              <li aria-hidden="true" className="text-black/25">
+                &middot;
+              </li>
+              <li>
+                Free West Jordan pickup, {deliveryFee} local delivery
+              </li>
+            </ul>
           </div>
 
           <div className="relative mx-auto w-full max-w-xl animate-fade-in-up animation-delay-200">
@@ -88,7 +93,7 @@ export default function Home() {
               <div className="relative aspect-square w-full max-h-[min(80vw,28rem)] mx-auto">
                 <Image
                   src="/IMG_6761_VSCO.JPG"
-                  alt="Fresh baked goods from Bay's Baked Goods, West Jordan, Utah"
+                  alt="Bailey, the baker behind Bay's Baked Goods, in her West Jordan, Utah home kitchen with a Bay's Baked Goods bag"
                   fill
                   sizes="(max-width: 1024px) 90vw, min(28rem, 35vw)"
                   priority
@@ -101,20 +106,9 @@ export default function Home() {
       </section>
 
       <section className="border-y border-black/5 bg-white/60 px-8 py-20 backdrop-blur-sm">
-        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-3">
-          <Link
-            href="/about"
-            className="group rounded-2xl border border-black/8 bg-white/50 p-8 transition hover:border-black/15 hover:shadow-lg"
-          >
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-black/55">Story</p>
-            <h2 className="mt-3 font-serif text-2xl italic text-black group-hover:underline">
-              About Bailey
-            </h2>
-            <p className="mt-3 text-black/70">
-              The home bakery behind the sourdough, the dog named Goose, and the love of from-scratch
-              baking.
-            </p>
-          </Link>
+        {/* Bailey's story has its own section further down, so it is not repeated
+            as a card here. */}
+        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-2">
           <Link
             href="/menu"
             className="group rounded-2xl border border-black/8 bg-white/50 p-8 transition hover:border-black/15 hover:shadow-lg"
@@ -182,21 +176,36 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Replaces an empty "reviews coming soon" block. For a home bakery, naming
+          the person doing the baking does more trust work than a testimonial  -
+          and it is the one thing a larger competitor cannot copy. */}
       <section className="border-y border-black/5 bg-white/50 px-8 py-16 backdrop-blur-sm">
-        <div className="mx-auto max-w-4xl text-center">
+        <div className="mx-auto max-w-3xl">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-black/55">
-            What customers are saying
+            Who bakes your order
           </p>
           <h2 className="mt-3 font-serif text-3xl italic text-black md:text-4xl">
-            Love from the neighborhood
+            Hi, I&apos;m Bailey.
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-black/65">
-            We&apos;re building this space for real customer quotes. If you&apos;ve enjoyed Bay&apos;s
-            Baked Goods, tell Bailey  -  we&apos;d love to feature your words here.
-          </p>
-          <div className="mt-10 rounded-2xl border border-dashed border-black/15 bg-[#f5f3ec]/80 px-8 py-12 text-black/45">
-            <p className="font-serif text-lg italic">Reviews coming soon.</p>
+          <div className="mt-6 space-y-5 text-lg leading-relaxed text-black/75">
+            <p>
+              Bay&apos;s Baked Goods is my home kitchen in West Jordan, not a storefront. Every loaf
+              is mixed, shaped, and baked by me in small batches  -  that&apos;s why orders need a
+              couple of days&apos; notice. Sourdough keeps its own schedule.
+            </p>
+            <p className="text-base text-black/60">
+              Everything is made in a home kitchen that also handles wheat, dairy, eggs, tree nuts,
+              and soy. Text me with any allergy questions before you order.
+            </p>
           </div>
+          <p className="mt-8">
+            <Link
+              href="/about"
+              className="font-medium underline underline-offset-4 transition-colors hover:text-black"
+            >
+              More about Bailey and Goose
+            </Link>
+          </p>
         </div>
       </section>
 
