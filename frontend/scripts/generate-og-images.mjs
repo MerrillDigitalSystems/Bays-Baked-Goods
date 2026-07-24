@@ -35,6 +35,8 @@ const TARGETS = [
   { out: "menu", src: "IMG_6335_VSCO.JPG", position: "centre" },
   { out: "about", src: "IMG_6712_VSCO.JPG", position: "centre" },
   { out: "order", src: "3E6348C5-1BEA-4652-9DCF-CAF1B46CEE46.jpeg", position: "centre" },
+  // Jalapeno cheddar stands in for custom bakes  -  it is an inclusion loaf.
+  { out: "custom-orders", src: "IMG_5967_VSCO.JPG", position: "centre" },
 
   // Product detail pages, keyed by `checkoutProducts[].id`.
   // No entry for `cinnamon-rolls`  -  no photo of it exists yet, so it falls back

@@ -76,6 +76,12 @@ export default function RootLayout({
               <Link href="/order" className="hover:text-white transition-colors">
                 Order online
               </Link>
+              <Link href="/custom-orders" className="hover:text-white transition-colors">
+                Custom orders
+              </Link>
+              <Link href="/delivery-areas" className="hover:text-white transition-colors">
+                Delivery areas
+              </Link>
               <a
                 href="https://www.facebook.com/profile.php?id=61587904335534"
                 className="hover:text-white transition-colors"

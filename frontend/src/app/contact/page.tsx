@@ -68,7 +68,14 @@ export default function ContactPage() {
 
           <p className="mx-auto max-w-2xl text-lg leading-relaxed text-gray-400">
             Prefer delivery? Bay&apos;s offers local delivery to surrounding areas for a {deliveryFee}{" "}
-            fee. Text Bailey to confirm your address is in the delivery zone before ordering.
+            fee. Text Bailey to confirm your address is in the delivery zone before ordering, or see{" "}
+            <Link
+              href="/delivery-areas"
+              className="text-white underline underline-offset-4 hover:text-[#f5f3ec]"
+            >
+              which areas Bay&apos;s delivers to
+            </Link>
+            .
           </p>
 
           <p className="mx-auto max-w-2xl text-lg leading-relaxed text-gray-400">

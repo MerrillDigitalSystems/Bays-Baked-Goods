@@ -184,6 +184,20 @@ export const checkoutProducts: {
 
 const SITE_URL = "https://baysbakedgoods.com";
 
+/**
+ * Cities Bailey delivers to. Single source for schema `areaServed` and the
+ * /delivery-areas page so the two cannot drift apart. Only add a city Bailey
+ * actually delivers to  -  the delivery zone is confirmed by text per address,
+ * so this list is "commonly served", not a guarantee.
+ */
+export const SERVICE_AREA_CITIES = [
+  "West Jordan",
+  "South Jordan",
+  "Riverton",
+  "Herriman",
+  "Salt Lake City",
+] as const;
+
 export const bakerySchema = {
   "@context": "https://schema.org",
   "@type": "Bakery",
@@ -215,11 +229,7 @@ export const bakerySchema = {
     longitude: -111.9391,
   },
   areaServed: [
-    { "@type": "City", name: "West Jordan" },
-    { "@type": "City", name: "South Jordan" },
-    { "@type": "City", name: "Riverton" },
-    { "@type": "City", name: "Herriman" },
-    { "@type": "City", name: "Salt Lake City" },
+    ...SERVICE_AREA_CITIES.map((name) => ({ "@type": "City", name })),
     { "@type": "State", name: "Utah" },
   ],
   hasMenu: `${SITE_URL}/menu`,
