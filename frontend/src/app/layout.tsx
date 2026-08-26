@@ -79,6 +79,15 @@ export default function RootLayout({
               <Link href="/custom-orders" className="hover:text-white transition-colors">
                 Custom orders
               </Link>
+              <Link href="/catering" className="hover:text-white transition-colors">
+                Catering
+              </Link>
+              <Link href="/gift-baskets" className="hover:text-white transition-colors">
+                Gift baskets
+              </Link>
+              <Link href="/weddings" className="hover:text-white transition-colors">
+                Weddings
+              </Link>
               <Link href="/delivery-areas" className="hover:text-white transition-colors">
                 Delivery areas
               </Link>

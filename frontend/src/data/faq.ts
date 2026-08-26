@@ -46,6 +46,21 @@ export function getFaqEntries() {
         "Text Bailey with your date, headcount, and what you have in mind. Larger orders need more notice than the usual couple of days, so reach out as early as you can.",
     },
     {
+      question: "Do you offer catering?",
+      answer:
+        "Yes, drop-off style. Bailey bakes bagel boards, sourdough and focaccia for a crowd, cinnamon roll boxes, and cookie trays for parties, showers, brunches, and office mornings - everything arrives baked, boxed, and ready to set out. Text her your date and headcount for a quote.",
+    },
+    {
+      question: "Do you make gift baskets?",
+      answer:
+        "Yes. Gift boxes of fresh sourdough, bagels, cinnamon rolls, and cookies are assembled to order around your budget and occasion - there is no fixed catalog. Pickup free in West Jordan, or local delivery to the recipient's door in the delivery zone.",
+    },
+    {
+      question: "Do you make wedding cakes?",
+      answer:
+        "No - Bay's doesn't bake cakes. For weddings, Bailey bakes cookie favors, mini sourdough loaves for welcome bags, dessert-table cookies and cinnamon rolls, and bread for rehearsal dinners, and she is happy to work alongside your cake baker.",
+    },
+    {
       question: "What payment methods do you accept?",
       answer:
         "Signature menu items can be paid for by card at checkout, handled securely through Stripe. Custom Make Your Own orders are quoted by text and typically paid through Venmo.",

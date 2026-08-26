@@ -234,7 +234,7 @@ export const bakerySchema = {
   ],
   hasMenu: `${SITE_URL}/menu`,
   description:
-    "Order-based home bakery in West Jordan, Utah specializing in fresh sourdough, bagels, focaccia, cinnamon rolls, and custom bakes. Pickup in West Jordan and local delivery to surrounding areas - text to confirm delivery availability.",
+    "Order-based home bakery in West Jordan, Utah specializing in fresh sourdough, bagels, focaccia, cinnamon rolls, and custom bakes. Drop-off catering, gift baskets, and wedding favors available on request. Pickup in West Jordan and local delivery to surrounding areas - text to confirm delivery availability.",
   sameAs: [
     "https://www.facebook.com/profile.php?id=61587904335534",
     "https://www.instagram.com/bays.bakedgoods",

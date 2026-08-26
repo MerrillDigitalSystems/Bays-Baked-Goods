@@ -37,6 +37,11 @@ const TARGETS = [
   { out: "order", src: "3E6348C5-1BEA-4652-9DCF-CAF1B46CEE46.jpeg", position: "centre" },
   // Jalapeno cheddar stands in for custom bakes  -  it is an inclusion loaf.
   { out: "custom-orders", src: "IMG_5967_VSCO.JPG", position: "centre" },
+  // Occasion pages: bagels read as a spread, the branded bag reads as a gift,
+  // cookies are the wedding-favor item. All real photos  -  see photo inventory.
+  { out: "catering", src: "2BD15450-2976-4311-A7ED-7117767DF9FC_VSCO.JPG", position: "centre" },
+  { out: "gift-baskets", src: "IMG_6712_VSCO.JPG", position: "centre" },
+  { out: "weddings", src: "3E6348C5-1BEA-4652-9DCF-CAF1B46CEE46.jpeg", position: "centre" },
 
   // Product detail pages, keyed by `checkoutProducts[].id`.
   // No entry for `cinnamon-rolls`  -  no photo of it exists yet, so it falls back

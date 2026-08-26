@@ -31,6 +31,34 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
   };
 }
 
+/**
+ * Service structured data for occasion pages (catering, gifts, weddings).
+ * Provider is an @id reference to the Bakery node, so include bakerySchema in
+ * the same jsonLdGraph. Keep names/descriptions to offerings Bailey has
+ * actually confirmed  -  no cakes, no minimums, no radius claims.
+ */
+export function serviceJsonLd(opts: {
+  name: string;
+  serviceType: string;
+  description: string;
+  path: string;
+}) {
+  const base = "https://baysbakedgoods.com";
+  return {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: opts.name,
+    serviceType: opts.serviceType,
+    description: opts.description,
+    url: `${base}${opts.path}`,
+    provider: { "@id": `${base}/#bakery` },
+    areaServed: [
+      { "@type": "City", name: "West Jordan" },
+      { "@type": "State", name: "Utah" },
+    ],
+  };
+}
+
 /** Combine entities; strips nested `@context` so a single root context applies. */
 export function jsonLdGraph(...items: object[]) {
   return {
