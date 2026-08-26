@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { DELIVERY_FEE_CENTS } from "@/config/site";
-import { checkoutCatalog, type CheckoutSku } from "@/data/menu";
+import { getCheckoutCatalog } from "@/lib/content";
 import {
   PASS_THROUGH_CARD_FEES_ENABLED,
   grossChargeCentsFromNet,
@@ -77,6 +77,10 @@ export async function POST(request: Request) {
     }
   }
 
+  // Catalog is read per request so admin edits apply immediately  -  amounts
+  // always come from the server-side store, never from the client.
+  const checkoutCatalog = await getCheckoutCatalog();
+
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
   const summaryLines: string[] = [];
   let netCents = 0;
@@ -85,7 +89,7 @@ export async function POST(request: Request) {
     if (typeof row?.sku !== "string" || typeof row?.quantity !== "number") {
       return Response.json({ error: "Each item needs sku (string) and quantity (number)" }, { status: 400 });
     }
-    const sku = row.sku as CheckoutSku;
+    const sku = row.sku;
     if (!(sku in checkoutCatalog)) {
       return Response.json({ error: `Unknown product: ${row.sku}` }, { status: 400 });
     }

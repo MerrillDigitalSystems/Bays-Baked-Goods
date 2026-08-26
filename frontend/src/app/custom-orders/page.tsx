@@ -3,7 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
 import { formatDeliveryFeeDisplay, ORDER_LEAD_TIME_DAYS } from "@/config/site";
-import { bakerySchema, customMenuItems } from "@/data/menu";
+import { bakerySchema } from "@/data/menu";
+import { getCustomItems } from "@/lib/content";
 import { breadcrumbJsonLd, jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
 
 const TITLE =
@@ -28,8 +29,9 @@ const customLd = jsonLdGraph(
   ])
 );
 
-export default function CustomOrdersPage() {
+export default async function CustomOrdersPage() {
   const deliveryFee = formatDeliveryFeeDisplay();
+  const customMenuItems = await getCustomItems();
 
   return (
     <main className="flex-grow px-8 py-16 md:py-24">

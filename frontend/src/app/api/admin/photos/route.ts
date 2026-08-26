@@ -1,0 +1,88 @@
+import { promises as fs } from "node:fs";
+import { randomBytes } from "node:crypto";
+import path from "node:path";
+import { isAdminRequest } from "@/lib/admin-auth";
+import {
+  deleteUploadedPhoto,
+  listPhotoLibrary,
+  UPLOADS_DIR,
+  ValidationError,
+} from "@/lib/admin-products";
+
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+/** Photo library for the picker. */
+export async function GET() {
+  if (!(await isAdminRequest())) {
+    return Response.json({ error: "Not signed in" }, { status: 401 });
+  }
+  return Response.json({ photos: await listPhotoLibrary() });
+}
+
+/**
+ * Upload a photo from Bailey's phone. Re-encoded with sharp (EXIF rotation
+ * honored, resized to a sane width, recompressed) so a 12 MB camera photo
+ * becomes a fast web asset. iPhones hand over JPEG for `accept="image/*"`
+ * uploads, so HEIC support is not needed.
+ */
+export async function POST(request: Request) {
+  if (!(await isAdminRequest())) {
+    return Response.json({ error: "Not signed in" }, { status: 401 });
+  }
+  try {
+    const form = await request.formData();
+    const file = form.get("file");
+    if (!(file instanceof File)) {
+      return Response.json({ error: "No photo attached" }, { status: 400 });
+    }
+    if (!ACCEPTED_TYPES.has(file.type)) {
+      return Response.json(
+        { error: "Use a JPEG, PNG, or WebP photo (HEIC isn't supported - your phone converts automatically when you pick from the photo library)." },
+        { status: 400 }
+      );
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return Response.json({ error: "Photo is too large (15 MB max)" }, { status: 400 });
+    }
+
+    const input = Buffer.from(await file.arrayBuffer());
+    const { default: sharp } = await import("sharp");
+    const output = await sharp(input)
+      .rotate()
+      .resize({ width: 1600, withoutEnlargement: true })
+      .jpeg({ quality: 82, mozjpeg: true })
+      .toBuffer();
+
+    const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const name = `${stamp}-${randomBytes(4).toString("hex")}.jpg`;
+    await fs.mkdir(UPLOADS_DIR, { recursive: true });
+    await fs.writeFile(path.join(UPLOADS_DIR, name), output);
+
+    return Response.json({ path: `/uploads/${name}` });
+  } catch (err) {
+    console.error("photo upload failed:", err);
+    return Response.json(
+      { error: "Couldn't process that photo - try a different one." },
+      { status: 500 }
+    );
+  }
+}
+
+/** Delete an unused uploaded photo. */
+export async function DELETE(request: Request) {
+  if (!(await isAdminRequest())) {
+    return Response.json({ error: "Not signed in" }, { status: 401 });
+  }
+  try {
+    const body = (await request.json()) as { path?: unknown };
+    await deleteUploadedPhoto(body.path);
+    return Response.json({ ok: true });
+  } catch (err) {
+    if (err instanceof ValidationError) {
+      return Response.json({ error: err.message }, { status: 400 });
+    }
+    console.error("photo delete failed:", err);
+    return Response.json({ error: "Something went wrong - try again." }, { status: 500 });
+  }
+}

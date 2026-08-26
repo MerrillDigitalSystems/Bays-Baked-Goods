@@ -4,24 +4,26 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { formatLeadTimeNotice } from "@/config/site";
+import { bakerySchema } from "@/data/menu";
 import {
-  bakerySchema,
-  checkoutProducts,
+  getAvailableProducts,
   getProductBySlug,
   getProductDetailJsonLd,
-} from "@/data/menu";
+  variantPriceDisplay,
+} from "@/lib/content";
 import { breadcrumbJsonLd, jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
 
 type Props = { params: Promise<{ slug: string }> };
 
-/** Pre-render every product page at build time. */
-export function generateStaticParams() {
-  return checkoutProducts.map((product) => ({ slug: product.id }));
+/** Pre-render known products at build time; new admin-created slugs render on demand. */
+export async function generateStaticParams() {
+  const products = await getAvailableProducts();
+  return products.map((product) => ({ slug: product.id }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
   if (!product) {
     return { title: "Menu | Bay's Baked Goods" };
   }
@@ -29,9 +31,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${product.title} | Bay's Baked Goods – West Jordan, Utah`,
     description: `${product.description} Order ${product.title.toLowerCase()} online from Bay's Baked Goods, a home bakery in West Jordan, Utah.`,
     canonicalPath: `/menu/${product.id}`,
-    // `public/og/<id>.jpg` exists for every product that has a photo; the rest
-    // fall back to the default sourdough share image (see generate-og-images.mjs).
-    ogImagePath: product.imageSrc ? `/og/${product.id}.jpg` : undefined,
+    // Committed `/og/<id>.jpg` for seed photos; `/og/dynamic/<id>.jpg` once a
+    // photo is changed in the admin. Absent = default sourdough share image.
+    ogImagePath: product.ogImagePath,
     ogImageAlt: product.imageSrc
       ? `${product.title} from Bay's Baked Goods in West Jordan, Utah`
       : undefined,
@@ -40,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
   if (!product) notFound();
 
   const productLd = jsonLdGraph(
@@ -124,7 +126,9 @@ export default async function ProductPage({ params }: Props) {
                     className="flex items-center justify-between px-5 py-4"
                   >
                     <span className="text-black/80">{variant.shortLabel}</span>
-                    <span className="text-lg font-medium text-black">{variant.priceDisplay}</span>
+                    <span className="text-lg font-medium text-black">
+                      {variantPriceDisplay(variant)}
+                    </span>
                   </li>
                 ))}
               </ul>

@@ -4,11 +4,11 @@ import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
 import { formatDeliveryFeeDisplay, ORDER_LEAD_TIME_DAYS } from "@/config/site";
 import {
-  customMenuItems,
+  getAvailableProducts,
+  getCustomItems,
   getMenuItemListJsonLd,
-  getProductBySlug,
-  signatureMenuItems,
-} from "@/data/menu";
+  productSummary,
+} from "@/lib/content";
 import { breadcrumbJsonLd, jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
@@ -21,20 +21,21 @@ export const metadata: Metadata = pageMetadata({
     "Sliced thyme and honey focaccia on a wooden board from Bay's Baked Goods in West Jordan, Utah",
 });
 
-const menuLd = jsonLdGraph(
-  getMenuItemListJsonLd(),
-  webPageJsonLd(
-    "/menu",
-    "Menu & Pricing | Bay's Baked Goods – Sourdough, Bagels, Cinnamon Rolls & More"
-  ),
-  breadcrumbJsonLd([
-    { name: "Home", path: "/" },
-    { name: "Menu", path: "/menu" },
-  ])
-);
-
-export default function MenuPage() {
+export default async function MenuPage() {
   const deliveryFee = formatDeliveryFeeDisplay();
+  const products = await getAvailableProducts();
+  const customItems = await getCustomItems();
+  const menuLd = jsonLdGraph(
+    await getMenuItemListJsonLd(),
+    webPageJsonLd(
+      "/menu",
+      "Menu & Pricing | Bay's Baked Goods – Sourdough, Bagels, Cinnamon Rolls & More"
+    ),
+    breadcrumbJsonLd([
+      { name: "Home", path: "/" },
+      { name: "Menu", path: "/menu" },
+    ])
+  );
   return (
     <main className="flex-grow px-8 py-16 md:py-24">
       <JsonLd data={menuLd} />
@@ -77,8 +78,8 @@ export default function MenuPage() {
           {/* People buy food with their eyes, so the menu leads with the photo
               rather than reading as a price list. */}
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {signatureMenuItems.map((item) => {
-              const product = getProductBySlug(item.slug);
+            {products.map((product) => {
+              const item = productSummary(product);
               return (
                 <Link
                   key={item.name}
@@ -144,7 +145,7 @@ export default function MenuPage() {
             </div>
 
             <div className="space-y-8">
-              {customMenuItems.map((item) => (
+              {customItems.map((item) => (
                 <div
                   key={item.name}
                   className="grid gap-4 border-b border-black/5 pb-6 last:border-b-0 last:pb-0 md:grid-cols-[1.2fr_0.8fr_0.8fr] md:items-end"

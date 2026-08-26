@@ -4,18 +4,26 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { DELIVERY_FEE_CENTS, formatDeliveryFeeDisplay } from "@/config/site";
 import { trackBeginCheckout } from "@/lib/analytics";
-import {
-  checkoutCatalog,
-  checkoutProducts,
-  type CheckoutSku,
-} from "@/data/menu";
+// Product data arrives as props from the server page so runtime admin edits
+// show up without a client rebuild  -  never import the catalog here.
 import {
   PASS_THROUGH_CARD_FEES_ENABLED,
   customerChargeTotalCents,
   passThroughSurchargeCents,
 } from "@/lib/stripe-fees";
 
-type CartLine = { sku: CheckoutSku; quantity: number };
+export type CartVariant = { sku: string; shortLabel: string; priceDisplay: string };
+export type CartProduct = {
+  id: string;
+  title: string;
+  description: string;
+  imageSrc?: string;
+  imageObjectPosition?: string;
+  variants: CartVariant[];
+};
+export type CatalogMap = Record<string, { label: string; unitAmount: number }>;
+
+type CartLine = { sku: string; quantity: number };
 type Fulfillment = "pickup" | "delivery";
 
 function formatMoney(cents: number): string {
@@ -85,7 +93,13 @@ function ProductImage({
   );
 }
 
-export function OrderCart() {
+export function OrderCart({
+  products,
+  catalog,
+}: {
+  products: CartProduct[];
+  catalog: CatalogMap;
+}) {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [fulfillment, setFulfillment] = useState<Fulfillment>("pickup");
   const [street, setStreet] = useState("");
@@ -96,8 +110,11 @@ export function OrderCart() {
 
   const subtotalCents = useMemo(
     () =>
-      cart.reduce((sum, line) => sum + checkoutCatalog[line.sku].unitAmount * line.quantity, 0),
-    [cart]
+      cart.reduce(
+        (sum, line) => sum + (catalog[line.sku]?.unitAmount ?? 0) * line.quantity,
+        0
+      ),
+    [cart, catalog]
   );
 
   const deliveryFeeLine = fulfillment === "delivery" ? DELIVERY_FEE_CENTS : 0;
@@ -105,7 +122,7 @@ export function OrderCart() {
   const passThroughCents = useMemo(() => passThroughSurchargeCents(netCents), [netCents]);
   const chargeTotalCents = useMemo(() => customerChargeTotalCents(netCents), [netCents]);
 
-  function addSku(sku: CheckoutSku, qty: number) {
+  function addSku(sku: string, qty: number) {
     setError(null);
     const q = Math.min(24, Math.max(1, Math.floor(qty)));
     setCart((prev) => {
@@ -117,11 +134,11 @@ export function OrderCart() {
     });
   }
 
-  function removeLine(sku: CheckoutSku) {
+  function removeLine(sku: string) {
     setCart((prev) => prev.filter((l) => l.sku !== sku));
   }
 
-  function setQty(sku: CheckoutSku, quantity: number) {
+  function setQty(sku: string, quantity: number) {
     const q = Math.min(24, Math.max(1, Math.floor(quantity)));
     setCart((prev) => prev.map((l) => (l.sku === sku ? { ...l, quantity: q } : l)));
   }
@@ -181,7 +198,7 @@ export function OrderCart() {
         </div>
 
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 xl:grid-cols-3">
-          {checkoutProducts.map((product, cardIndex) => (
+          {products.map((product, cardIndex) => (
             <article
               key={product.id}
               className="flex flex-col overflow-hidden rounded-2xl border border-black/8 bg-white/85 shadow-[0_12px_40px_rgba(0,0,0,0.06)] transition hover:shadow-[0_16px_48px_rgba(0,0,0,0.09)]"
@@ -305,7 +322,9 @@ export function OrderCart() {
                 className="flex flex-col gap-2 border-b border-black/5 pb-4 last:border-b-0"
               >
                 <div className="flex justify-between gap-2 text-sm">
-                  <span className="font-medium text-black">{checkoutCatalog[line.sku].label}</span>
+                  <span className="font-medium text-black">
+                    {catalog[line.sku]?.label ?? line.sku}
+                  </span>
                   <button
                     type="button"
                     onClick={() => removeLine(line.sku)}
@@ -328,7 +347,7 @@ export function OrderCart() {
                     onChange={(e) => setQty(line.sku, Number(e.target.value))}
                   />
                   <span className="text-black/80">
-                    {formatMoney(checkoutCatalog[line.sku].unitAmount * line.quantity)}
+                    {formatMoney((catalog[line.sku]?.unitAmount ?? 0) * line.quantity)}
                   </span>
                 </div>
               </li>

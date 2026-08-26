@@ -4,6 +4,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { OrderCart } from "@/components/OrderCart";
 import { formatLeadTimeNotice } from "@/config/site";
 import { bakerySchema } from "@/data/menu";
+import { getAvailableProducts, getCheckoutCatalog, variantPriceDisplay } from "@/lib/content";
 import { breadcrumbJsonLd, jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
@@ -28,7 +29,21 @@ const orderLd = jsonLdGraph(
   ])
 );
 
-export default function OrderPage() {
+export default async function OrderPage() {
+  const storeProducts = await getAvailableProducts();
+  const catalog = await getCheckoutCatalog();
+  const products = storeProducts.map((p) => ({
+    id: p.id,
+    title: p.title,
+    description: p.description,
+    imageSrc: p.imageSrc,
+    imageObjectPosition: p.imageObjectPosition,
+    variants: p.variants.map((v) => ({
+      sku: v.sku,
+      shortLabel: v.shortLabel,
+      priceDisplay: variantPriceDisplay(v),
+    })),
+  }));
   return (
     <main className="flex-grow px-8 py-16 md:py-24">
       <JsonLd data={orderLd} />
@@ -56,7 +71,7 @@ export default function OrderPage() {
       </div>
 
       <div className="mx-auto mt-14 max-w-7xl">
-        <OrderCart />
+        <OrderCart products={products} catalog={catalog} />
       </div>
     </main>
   );

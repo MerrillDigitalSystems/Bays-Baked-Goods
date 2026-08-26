@@ -1,11 +1,12 @@
 import type { MetadataRoute } from "next";
-import { checkoutProducts } from "@/data/menu";
+import { getAvailableProducts } from "@/lib/content";
 
 const base = "https://baysbakedgoods.com";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-  const productPages: MetadataRoute.Sitemap = checkoutProducts.map((product) => ({
+  const products = await getAvailableProducts();
+  const productPages: MetadataRoute.Sitemap = products.map((product) => ({
     url: `${base}/menu/${product.id}`,
     lastModified: now,
     changeFrequency: "monthly",
