@@ -27,8 +27,17 @@ export const ALLERGEN_OPTIONS = [
 ] as const;
 
 const PUBLIC_DIR = path.join(process.cwd(), "public");
-export const UPLOADS_DIR = path.join(PUBLIC_DIR, "uploads");
-const OG_DYNAMIC_DIR = path.join(PUBLIC_DIR, "og", "dynamic");
+/**
+ * Runtime files (Bailey's uploads, generated OG crops) live OUTSIDE public/:
+ * production `next start` snapshots public/ at build time, so files added
+ * later 404. Route handlers at /uploads/[name] and /og/dynamic/[name] serve
+ * these from disk instead, keeping the stored URL paths unchanged.
+ */
+export const MEDIA_DIR = path.join(process.cwd(), "media");
+export const UPLOADS_DIR = path.join(MEDIA_DIR, "uploads");
+export const OG_DYNAMIC_DIR = path.join(MEDIA_DIR, "og");
+/** Pre-fix uploads may exist under public/uploads on a machine that rebuilt; still readable. */
+export const LEGACY_UPLOADS_DIR = path.join(PUBLIC_DIR, "uploads");
 
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 
@@ -48,21 +57,37 @@ function assert(cond: unknown, message: string): asserts cond {
   if (!cond) throw new ValidationError(message);
 }
 
-/** Resolve an image path under public/ safely; returns absolute path. */
-function resolvePublicImage(imageSrc: string): string {
+/**
+ * Resolve a site image path (/uploads/... or a committed /... photo) to the
+ * absolute file that actually holds it, verifying it exists. Uploads resolve
+ * into media/uploads first, then the legacy public/uploads location.
+ */
+export async function resolveImageFile(imageSrc: string): Promise<string> {
   assert(imageSrc.startsWith("/"), "Image path must start with /");
-  const abs = path.resolve(PUBLIC_DIR, `.${imageSrc}`);
-  assert(
-    abs.startsWith(PUBLIC_DIR + path.sep),
-    "Image path must stay inside the public folder"
-  );
-  assert(IMAGE_EXTENSIONS.has(path.extname(abs).toLowerCase()), "Unsupported image type");
-  return abs;
+  assert(!imageSrc.includes(".."), "Invalid image path");
+  assert(IMAGE_EXTENSIONS.has(path.extname(imageSrc).toLowerCase()), "Unsupported image type");
+  const name = imageSrc.slice("/uploads/".length);
+  const candidates = imageSrc.startsWith("/uploads/")
+    ? [
+        { abs: path.resolve(UPLOADS_DIR, name), root: UPLOADS_DIR },
+        { abs: path.resolve(LEGACY_UPLOADS_DIR, name), root: LEGACY_UPLOADS_DIR },
+      ]
+    : [{ abs: path.resolve(PUBLIC_DIR, `.${imageSrc}`), root: PUBLIC_DIR }];
+  for (const { abs, root } of candidates) {
+    if (!abs.startsWith(root + path.sep)) continue;
+    try {
+      await fs.access(abs);
+      return abs;
+    } catch {
+      // try next candidate
+    }
+  }
+  throw new ValidationError("That photo file could not be found");
 }
 
 async function publicImageExists(imageSrc: string): Promise<boolean> {
   try {
-    await fs.access(resolvePublicImage(imageSrc));
+    await resolveImageFile(imageSrc);
     return true;
   } catch {
     return false;
@@ -171,7 +196,7 @@ async function refreshOgImage(
     const { default: sharp } = await import("sharp");
     await fs.mkdir(OG_DYNAMIC_DIR, { recursive: true });
     const out = path.join(OG_DYNAMIC_DIR, `${product.id}.jpg`);
-    await sharp(resolvePublicImage(product.imageSrc))
+    await sharp(await resolveImageFile(product.imageSrc))
       .rotate()
       .resize(1200, 630, { fit: "cover", position: "centre" })
       .jpeg({ quality: 82, mozjpeg: true, chromaSubsampling: "4:2:0" })
@@ -290,16 +315,20 @@ export async function listPhotoLibrary(): Promise<{ path: string; inUseBy: strin
   };
 
   // Uploads first (newest first), then photos referenced by products.
-  try {
-    const files = await fs.readdir(UPLOADS_DIR);
-    files
-      .filter((f) => IMAGE_EXTENSIONS.has(path.extname(f).toLowerCase()))
-      .sort()
-      .reverse()
-      .forEach((f) => add(`/uploads/${f}`));
-  } catch {
-    // uploads dir does not exist yet
+  const uploadNames = new Set<string>();
+  for (const dir of [UPLOADS_DIR, LEGACY_UPLOADS_DIR]) {
+    try {
+      for (const f of await fs.readdir(dir)) {
+        if (IMAGE_EXTENSIONS.has(path.extname(f).toLowerCase())) uploadNames.add(f);
+      }
+    } catch {
+      // dir does not exist yet
+    }
   }
+  [...uploadNames]
+    .sort()
+    .reverse()
+    .forEach((f) => add(`/uploads/${f}`));
   for (const p of content.products) {
     if (p.imageSrc) add(p.imageSrc);
   }
@@ -310,8 +339,11 @@ export async function listPhotoLibrary(): Promise<{ path: string; inUseBy: strin
 export async function deleteUploadedPhoto(publicPath: unknown): Promise<void> {
   assert(typeof publicPath === "string", "Missing photo path");
   assert(publicPath.startsWith("/uploads/"), "Only uploaded photos can be deleted");
-  const abs = resolvePublicImage(publicPath);
-  assert(abs.startsWith(UPLOADS_DIR + path.sep), "Only uploaded photos can be deleted");
+  const abs = await resolveImageFile(publicPath);
+  assert(
+    abs.startsWith(UPLOADS_DIR + path.sep) || abs.startsWith(LEGACY_UPLOADS_DIR + path.sep),
+    "Only uploaded photos can be deleted"
+  );
   const content = await getSiteContent();
   assert(
     !content.products.some((p) => p.imageSrc === publicPath),

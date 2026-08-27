@@ -41,7 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# runtime content edited via /admin (lives on the Pi, seeded from src/data/menu.ts)
+# runtime content edited via /admin (lives on the Pi, seeded from src/data/menu.ts);
+# media/ holds uploaded photos + generated OG crops, served by route handlers
 /content/
-/public/uploads/
-/public/og/dynamic/
+/media/
