@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import Link from "next/link";
 import { Analytics } from "@/components/Analytics";
+import { CartFlyout } from "@/components/cart/CartFlyout";
+import { CartProvider } from "@/components/cart/CartProvider";
+import { getCheckoutCatalog } from "@/lib/content";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -34,16 +37,20 @@ export const viewport: Viewport = {
   themeColor: "#f5f3ec",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Cart prices always come from the server-side catalog; revalidated on
+  // every admin save along with the rest of the layout.
+  const catalog = await getCheckoutCatalog();
   return (
     <html lang="en" className="scroll-smooth">
       <body
         className={`${inter.variable} ${playfair.variable} antialiased min-h-screen flex flex-col bg-[#f5f3ec] text-[#1a1a1a]`}
       >
+        <CartProvider catalog={catalog}>
         <Analytics />
         <header className="sticky top-0 z-50 bg-[#f5f3ec]/80 backdrop-blur-md border-b border-black/5">
           <div className="max-w-6xl mx-auto px-8 py-4 flex justify-between items-center">
@@ -122,6 +129,8 @@ export default function RootLayout({
             </a>
           </div>
         </footer>
+        <CartFlyout />
+        </CartProvider>
       </body>
     </html>
   );

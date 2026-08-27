@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AddToCartButtons } from "@/components/cart/AddToCartButtons";
 import { JsonLd } from "@/components/JsonLd";
 import { formatLeadTimeNotice } from "@/config/site";
 import { bakerySchema } from "@/data/menu";
@@ -119,19 +120,13 @@ export default async function ProductPage({ params }: Props) {
 
             <div>
               <h2 className="text-lg font-semibold text-black">Sizes &amp; pricing</h2>
-              <ul className="mt-3 divide-y divide-black/5 rounded-2xl border border-black/8 bg-white/50">
-                {product.variants.map((variant) => (
-                  <li
-                    key={variant.sku}
-                    className="flex items-center justify-between px-5 py-4"
-                  >
-                    <span className="text-black/80">{variant.shortLabel}</span>
-                    <span className="text-lg font-medium text-black">
-                      {variantPriceDisplay(variant)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <AddToCartButtons
+                variants={product.variants.map((variant) => ({
+                  sku: variant.sku,
+                  shortLabel: variant.shortLabel,
+                  priceDisplay: variantPriceDisplay(variant),
+                }))}
+              />
             </div>
 
             {product.allergens.length > 0 && (

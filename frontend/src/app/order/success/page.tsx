@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ClearCartOnSuccess } from "@/components/cart/ClearCartOnSuccess";
 
 export const metadata: Metadata = {
   title: "Thank You | Bay's Baked Goods",
@@ -16,6 +17,7 @@ export default async function OrderSuccessPage({ searchParams }: Props) {
 
   return (
     <main className="flex-grow px-8 py-24 text-center">
+      <ClearCartOnSuccess />
       <div className="mx-auto max-w-lg space-y-6">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-black/55">Payment received</p>
         <h1 className="font-serif text-4xl italic text-black md:text-5xl">Thank you!</h1>
