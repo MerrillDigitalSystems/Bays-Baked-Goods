@@ -9,8 +9,7 @@ import {
   ValidationError,
 } from "@/lib/admin-products";
 
-const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
-const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 /** Photo library for the picker. */
 export async function GET() {
@@ -21,10 +20,12 @@ export async function GET() {
 }
 
 /**
- * Upload a photo from Bailey's phone. Re-encoded with sharp (EXIF rotation
- * honored, resized to a sane width, recompressed) so a 12 MB camera photo
- * becomes a fast web asset. iPhones hand over JPEG for `accept="image/*"`
- * uploads, so HEIC support is not needed.
+ * Upload a photo from Bailey's phone. The form re-encodes to JPEG client-side
+ * when it can, but don't rely on that: phone pickers send unpredictable MIME
+ * types (HEIC, empty strings on some Androids), so the only trustworthy
+ * validator is sharp actually decoding the bytes. Re-encoded here regardless
+ * (EXIF rotation honored, resized, recompressed) so a 12 MB camera photo
+ * becomes a fast web asset.
  */
 export async function POST(request: Request) {
   if (!(await isAdminRequest())) {
@@ -36,23 +37,30 @@ export async function POST(request: Request) {
     if (!(file instanceof File)) {
       return Response.json({ error: "No photo attached" }, { status: 400 });
     }
-    if (!ACCEPTED_TYPES.has(file.type)) {
-      return Response.json(
-        { error: "Use a JPEG, PNG, or WebP photo (HEIC isn't supported - your phone converts automatically when you pick from the photo library)." },
-        { status: 400 }
-      );
-    }
     if (file.size > MAX_UPLOAD_BYTES) {
-      return Response.json({ error: "Photo is too large (15 MB max)" }, { status: 400 });
+      return Response.json({ error: "Photo is too large (25 MB max)" }, { status: 400 });
     }
 
     const input = Buffer.from(await file.arrayBuffer());
     const { default: sharp } = await import("sharp");
-    const output = await sharp(input)
-      .rotate()
-      .resize({ width: 1600, withoutEnlargement: true })
-      .jpeg({ quality: 82, mozjpeg: true })
-      .toBuffer();
+    let output: Buffer;
+    try {
+      output = await sharp(input)
+        .rotate()
+        .resize({ width: 1600, withoutEnlargement: true })
+        .jpeg({ quality: 82, mozjpeg: true })
+        .toBuffer();
+    } catch {
+      // sharp could not decode - most likely an HEIC that the browser also
+      // could not convert, or a non-image file.
+      return Response.json(
+        {
+          error:
+            "That photo format didn't work. In your camera settings choose \"Most Compatible\", or screenshot the photo and upload the screenshot.",
+        },
+        { status: 415 }
+      );
+    }
 
     const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     const name = `${stamp}-${randomBytes(4).toString("hex")}.jpg`;
@@ -63,7 +71,7 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("photo upload failed:", err);
     return Response.json(
-      { error: "Couldn't process that photo - try a different one." },
+      { error: "Upload failed - check your connection and try again." },
       { status: 500 }
     );
   }

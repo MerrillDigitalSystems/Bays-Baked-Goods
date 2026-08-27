@@ -37,6 +37,42 @@ function dollarsToCents(raw: string): number | null {
   return Math.round(parseFloat(cleaned) * 100);
 }
 
+/**
+ * Re-encode a picked photo to JPEG in the browser when possible. Phone pickers
+ * hand over HEIC (iPhone) or files with blank MIME types (some Androids);
+ * Safari can DECODE HEIC natively even though the server can't, so converting
+ * here fixes iPhone uploads and also shrinks multi-MB camera shots before
+ * they cross a cell connection. Falls back to the original file when decoding
+ * fails - the server then tries sharp and returns a clear error if it can't
+ * decode either.
+ */
+async function toUploadableJpeg(file: File): Promise<Blob> {
+  try {
+    let bitmap: ImageBitmap;
+    try {
+      bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    } catch {
+      bitmap = await createImageBitmap(file);
+    }
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+    const w = Math.max(1, Math.round(bitmap.width * scale));
+    const h = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.85)
+    );
+    return blob && blob.size > 0 ? blob : file;
+  } catch {
+    return file;
+  }
+}
+
 const POSITION_PRESETS: { label: string; value: string }[] = [
   { label: "Centered (default)", value: "" },
   { label: "Show more of the top", value: "center 25%" },
@@ -70,6 +106,7 @@ export function ProductForm({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const positionIsPreset = POSITION_PRESETS.some((p) => p.value === imagePosition);
 
@@ -85,20 +122,21 @@ export function ProductForm({
 
   async function uploadPhoto(file: File) {
     setUploading(true);
-    setError(null);
+    setUploadError(null);
     try {
+      const jpeg = await toUploadableJpeg(file);
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", new File([jpeg], "photo.jpg", { type: "image/jpeg" }));
       const res = await fetch("/api/admin/photos", { method: "POST", body: form });
       const data = (await res.json()) as { path?: string; error?: string };
       if (!res.ok || !data.path) {
-        setError(data.error ?? "Upload failed - try again.");
+        setUploadError(data.error ?? "Upload failed - try again.");
         return;
       }
       setImageSrc(data.path);
       setLibrary((prev) => [{ path: data.path!, inUseBy: [] }, ...prev]);
     } catch {
-      setError("Upload failed - check your connection and try again.");
+      setUploadError("Upload failed - check your connection and try again.");
     } finally {
       setUploading(false);
       if (fileInput.current) fileInput.current.value = "";
@@ -114,7 +152,7 @@ export function ProductForm({
     });
     const data = (await res.json()) as { error?: string };
     if (!res.ok) {
-      setError(data.error ?? "Couldn't delete that photo.");
+      setUploadError(data.error ?? "Couldn't delete that photo.");
       return;
     }
     setLibrary((prev) => prev.filter((p) => p.path !== path));
@@ -256,6 +294,7 @@ export function ProductForm({
             ref={fileInput}
             type="file"
             accept="image/*"
+            aria-label="Upload a photo"
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
@@ -263,6 +302,12 @@ export function ProductForm({
             }}
           />
         </div>
+
+        {uploadError ? (
+          <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {uploadError}
+          </p>
+        ) : null}
 
         {showLibrary ? (
           <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
