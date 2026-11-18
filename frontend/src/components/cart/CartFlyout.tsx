@@ -8,8 +8,8 @@ import { useCart } from "@/components/cart/CartProvider";
 /**
  * Site-wide cart access: a floating button (with item count) that opens a
  * slide-over drawer with the full cart + checkout. Appears once the cart has
- * items. On /order at desktop widths the sticky aside already shows the same
- * panel, so the button hides there to avoid doubling up.
+ * items. On ordering pages at desktop widths the sticky aside already shows
+ * the same panel, so the button hides there to avoid doubling up.
  */
 export function CartFlyout() {
   const { count, isOpen, openCart, closeCart } = useCart();
@@ -17,7 +17,7 @@ export function CartFlyout() {
 
   // The admin area has its own save bar in the same corner.
   const onAdmin = pathname.startsWith("/admin");
-  const onOrder = pathname === "/order";
+  const onOrder = ["/order", "/seasonal", "/porch-pickup"].includes(pathname);
 
   useEffect(() => {
     if (!isOpen) return;

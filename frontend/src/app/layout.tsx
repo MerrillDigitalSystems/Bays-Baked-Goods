@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Analytics } from "@/components/Analytics";
 import { CartFlyout } from "@/components/cart/CartFlyout";
 import { CartProvider } from "@/components/cart/CartProvider";
@@ -42,8 +43,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Cart prices always come from the server-side catalog; revalidated on
-  // every admin save along with the rest of the layout.
+  await connection();
   const catalog = await getCheckoutCatalog();
   return (
     <html lang="en" className="scroll-smooth">
@@ -53,23 +53,17 @@ export default async function RootLayout({
         <CartProvider catalog={catalog}>
         <Analytics />
         <header className="sticky top-0 z-50 bg-[#f5f3ec]/80 backdrop-blur-md border-b border-black/5">
-          <div className="max-w-6xl mx-auto px-8 py-4 flex justify-between items-center">
-            <Link href="/" className="font-bold text-xl tracking-tighter transition-colors hover:text-black/70">
+          <div className="max-w-6xl mx-auto px-8 py-4 flex justify-between items-center gap-4">
+            <Link href="/" className="shrink-0 font-bold text-xl tracking-tighter transition-colors hover:text-black/70">
               Bay&apos;s Baked Goods
             </Link>
-            <nav className="flex flex-wrap items-center justify-end gap-4 text-sm font-medium md:gap-6">
-              <Link href="/about" className="hover:text-gray-600 transition-colors">
-                About
-              </Link>
-              <Link href="/menu" className="hover:text-gray-600 transition-colors">
-                Menu
-              </Link>
-              <Link href="/order" className="hover:text-gray-600 transition-colors">
-                Order
-              </Link>
-              <Link href="/contact" className="hover:text-gray-600 transition-colors">
-                Contact
-              </Link>
+            <nav aria-label="Primary" className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 text-sm font-medium md:gap-x-5">
+              <Link href="/about" className="hover:text-gray-600 transition-colors">About</Link>
+              <Link href="/menu" className="hover:text-gray-600 transition-colors">Menu</Link>
+              <Link href="/seasonal" className="hover:text-gray-600 transition-colors">Seasonal</Link>
+              <Link href="/porch-pickup" className="hover:text-gray-600 transition-colors">Porch Pickup</Link>
+              <Link href="/order" className="hover:text-gray-600 transition-colors">Order</Link>
+              <Link href="/contact" className="hover:text-gray-600 transition-colors">Contact</Link>
             </nav>
           </div>
         </header>

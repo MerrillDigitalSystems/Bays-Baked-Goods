@@ -80,6 +80,15 @@ export async function POST(request: Request) {
   // Catalog is read per request so admin edits apply immediately  -  amounts
   // always come from the server-side store, never from the client.
   const checkoutCatalog = await getCheckoutCatalog();
+  const hasPorchItems = raw.items.some(
+    (row) => typeof row?.sku === "string" && checkoutCatalog[row.sku]?.menu === "porch"
+  );
+  if (hasPorchItems && fulfillment === "delivery") {
+    return Response.json(
+      { error: "Porch Pickup items cannot be ordered with delivery. Choose pickup instead." },
+      { status: 400 }
+    );
+  }
 
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
   const summaryLines: string[] = [];

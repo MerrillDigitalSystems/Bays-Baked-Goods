@@ -4,7 +4,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddToCartButtons } from "@/components/cart/AddToCartButtons";
 import { JsonLd } from "@/components/JsonLd";
-import { formatLeadTimeNotice } from "@/config/site";
+import { formatLeadTimeNotice, PICKUP_COPY } from "@/config/site";
+import { formatOrderingWindow } from "@/lib/availability";
+import { MENU_LABELS, MENU_PATHS } from "@/lib/menus";
 import { bakerySchema } from "@/data/menu";
 import {
   getAvailableProducts,
@@ -46,13 +48,17 @@ export default async function ProductPage({ params }: Props) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
+  const parentPath = MENU_PATHS[product.menu];
+  const parentLabel = MENU_LABELS[product.menu];
+  const orderingWindow = formatOrderingWindow(product);
+
   const productLd = jsonLdGraph(
     bakerySchema,
     getProductDetailJsonLd(product),
     webPageJsonLd(`/menu/${product.id}`, `${product.title} | Bay's Baked Goods`),
     breadcrumbJsonLd([
       { name: "Home", path: "/" },
-      { name: "Menu", path: "/menu" },
+      { name: parentLabel, path: parentPath },
       { name: product.title, path: `/menu/${product.id}` },
     ])
   );
@@ -71,8 +77,8 @@ export default async function ProductPage({ params }: Props) {
             </li>
             <li aria-hidden="true">/</li>
             <li>
-              <Link href="/menu" className="hover:text-black">
-                Menu
+              <Link href={parentPath} className="hover:text-black">
+                {parentLabel}
               </Link>
             </li>
             <li aria-hidden="true">/</li>
@@ -140,13 +146,14 @@ export default async function ProductPage({ params }: Props) {
               </div>
             )}
 
-            <p className="rounded-xl border border-black/8 bg-white/50 px-4 py-3 text-sm text-black/75">
-              {formatLeadTimeNotice()}
-            </p>
+            <div className="space-y-3 rounded-xl border border-black/8 bg-white/50 px-4 py-3 text-sm text-black/75">
+              <p>{product.menu === "porch" ? PICKUP_COPY : formatLeadTimeNotice()}</p>
+              {orderingWindow ? <p className="font-medium">{orderingWindow}</p> : null}
+            </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/order"
+                href={parentPath}
                 className="inline-flex items-center justify-center rounded-full bg-[#1a1a1a] px-8 py-3 text-lg font-medium text-white shadow-xl transition hover:bg-black"
               >
                 Order &amp; pay online
@@ -160,8 +167,8 @@ export default async function ProductPage({ params }: Props) {
             </div>
 
             <p className="text-sm text-black/55">
-              <Link href="/menu" className="underline underline-offset-2 hover:text-black">
-                Back to full menu
+              <Link href={parentPath} className="underline underline-offset-2 hover:text-black">
+                Back to {parentLabel}
               </Link>
             </p>
           </div>

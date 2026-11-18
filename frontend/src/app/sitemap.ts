@@ -1,9 +1,11 @@
 import type { MetadataRoute } from "next";
+import { connection } from "next/server";
 import { getAvailableProducts } from "@/lib/content";
 
 const base = "https://baysbakedgoods.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  await connection();
   const now = new Date();
   const products = await getAvailableProducts();
   const productPages: MetadataRoute.Sitemap = products.map((product) => ({
@@ -17,6 +19,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: base, lastModified: now, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/menu`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
+    { url: `${base}/seasonal`, lastModified: now, changeFrequency: "weekly", priority: 0.85 },
+    { url: `${base}/porch-pickup`, lastModified: now, changeFrequency: "weekly", priority: 0.85 },
     ...productPages,
     { url: `${base}/order`, lastModified: now, changeFrequency: "weekly", priority: 0.85 },
     {

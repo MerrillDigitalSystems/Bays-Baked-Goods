@@ -5,8 +5,10 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { MENU_LABELS, type MenuKind } from "@/lib/menus";
 
 export type FormVariant = { shortLabel: string; priceDollars: string };
+export type FormGroup = { id: string; menu: MenuKind; name: string };
 export type FormProduct = {
   id?: string;
   title: string;
@@ -15,6 +17,10 @@ export type FormProduct = {
   imageObjectPosition?: string;
   allergens: string[];
   available: boolean;
+  availabilityStart?: string;
+  availabilityEnd?: string;
+  menu: MenuKind;
+  groupId: string;
   variants: FormVariant[];
 };
 export type LibraryPhoto = { path: string; inUseBy: string[] };
@@ -83,10 +89,14 @@ export function ProductForm({
   mode,
   product,
   photoLibrary,
+  groups,
+  defaultMenu = "signature",
 }: {
   mode: "create" | "edit";
   product?: FormProduct;
   photoLibrary: LibraryPhoto[];
+  groups: FormGroup[];
+  defaultMenu?: MenuKind;
 }) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -97,6 +107,12 @@ export function ProductForm({
   const [imagePosition, setImagePosition] = useState(product?.imageObjectPosition ?? "");
   const [allergens, setAllergens] = useState<string[]>(product?.allergens ?? []);
   const [available, setAvailable] = useState(product?.available ?? true);
+  const [availabilityStart, setAvailabilityStart] = useState(product?.availabilityStart ?? "");
+  const [availabilityEnd, setAvailabilityEnd] = useState(product?.availabilityEnd ?? "");
+  const [menu, setMenu] = useState<MenuKind>(product?.menu ?? defaultMenu);
+  const [groupId, setGroupId] = useState(
+    product?.groupId ?? groups.find((group) => group.menu === (product?.menu ?? defaultMenu))?.id ?? ""
+  );
   const [variants, setVariants] = useState<FormVariant[]>(
     product?.variants?.length ? product.variants : [{ shortLabel: "", priceDollars: "" }]
   );
@@ -180,6 +196,10 @@ export function ProductForm({
       setError("Add at least one size & price.");
       return;
     }
+    if (availabilityStart && availabilityEnd && availabilityStart >= availabilityEnd) {
+      setError("Ordering closes must be later than ordering opens.");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -190,6 +210,10 @@ export function ProductForm({
         imageObjectPosition: imagePosition || undefined,
         allergens,
         available,
+        availabilityStart: availabilityStart || undefined,
+        availabilityEnd: availabilityEnd || undefined,
+        menu,
+        groupId,
         variants: parsedVariants,
       };
       const res = await fetch(
@@ -246,6 +270,39 @@ export function ProductForm({
 
   return (
     <div className="space-y-8 pb-28">
+      <section className="rounded-2xl border border-black/8 bg-white/80 p-5">
+        <h2 className="font-medium text-black">Menu &amp; group</h2>
+        <p className="mt-1 text-sm text-black/55">
+          Choose where this item belongs. You can rearrange it from the main admin page.
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm font-medium text-black/70">
+            Menu
+            <select
+              value={menu}
+              onChange={(event) => {
+                const nextMenu = event.target.value as MenuKind;
+                setMenu(nextMenu);
+                setGroupId(groups.find((group) => group.menu === nextMenu)?.id ?? "");
+              }}
+              className={inputClass}
+            >
+              {Object.entries(MENU_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm font-medium text-black/70">
+            Group
+            <select value={groupId} onChange={(event) => setGroupId(event.target.value)} className={inputClass}>
+              {groups.filter((group) => group.menu === menu).map((group) => (
+                <option key={group.id} value={group.id}>{group.name}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </section>
+
       {/* Photo */}
       <section className="rounded-2xl border border-black/8 bg-white/80 p-5">
         <h2 className="font-medium text-black">Photo</h2>
@@ -484,10 +541,50 @@ export function ProductForm({
             className="h-6 w-6 accent-black"
           />
         </label>
+        <div className="mt-5 border-t border-black/8 pt-5">
+          <h3 className="font-medium text-black">Ordering schedule</h3>
+          <p id="schedule-help" className="mt-1 text-sm text-black/55">
+            Optional. Times use Utah time. Leave both blank to keep ordering open whenever the item is shown.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium text-black/70">
+              Ordering opens
+              <input
+                type="datetime-local"
+                value={availabilityStart}
+                aria-describedby="schedule-help"
+                onChange={(event) => setAvailabilityStart(event.target.value)}
+                className={inputClass}
+              />
+            </label>
+            <label className="block text-sm font-medium text-black/70">
+              Ordering closes
+              <input
+                type="datetime-local"
+                value={availabilityEnd}
+                aria-describedby="schedule-help"
+                onChange={(event) => setAvailabilityEnd(event.target.value)}
+                className={inputClass}
+              />
+            </label>
+          </div>
+          {availabilityStart || availabilityEnd ? (
+            <button
+              type="button"
+              onClick={() => {
+                setAvailabilityStart("");
+                setAvailabilityEnd("");
+              }}
+              className="mt-3 text-sm font-medium text-black underline underline-offset-2"
+            >
+              Clear schedule
+            </button>
+          ) : null}
+        </div>
       </section>
 
       {error ? (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </p>
       ) : null}

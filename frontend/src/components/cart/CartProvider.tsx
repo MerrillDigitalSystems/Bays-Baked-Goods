@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import type { MenuKind } from "@/lib/menus";
 
 /**
  * Site-wide cart state, persisted to localStorage so a shopper can browse
@@ -9,7 +10,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
  * catalog, so an admin price change can never be bypassed by a stale cart.
  */
 
-export type CatalogMap = Record<string, { label: string; unitAmount: number }>;
+export type CatalogMap = Record<string, { label: string; unitAmount: number; menu: MenuKind }>;
 export type CartLine = { sku: string; quantity: number };
 export type Fulfillment = "pickup" | "delivery";
 export type DeliveryAddress = { street: string; city: string; zip: string };
@@ -100,9 +101,17 @@ export function CartProvider({
       // corrupted or blocked storage - start fresh
     }
     hydrated.current = true;
-    // Load once per mount; the catalog prop is stable for a page's lifetime.
+    // Load the saved cart once; later catalog updates are handled below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!hydrated.current) return;
+    setLines((current) => {
+      const next = current.filter((line) => line.sku in catalog);
+      return next.length === current.length ? current : next;
+    });
+  }, [catalog]);
 
   useEffect(() => {
     if (!hydrated.current) return;

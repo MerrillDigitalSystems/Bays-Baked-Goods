@@ -3,11 +3,14 @@ import path from "node:path";
 import {
   getSiteContent,
   saveSiteContent,
+  MENU_KINDS,
+  type MenuKind,
   type SiteContent,
   type StoredCustomItem,
   type StoredProduct,
   type StoredVariant,
 } from "@/lib/content";
+import { isValidLocalDateTime } from "@/lib/availability";
 
 /**
  * Server-side validation + persistence for admin edits. Everything Bailey
@@ -101,19 +104,28 @@ export type ProductInput = {
   imageObjectPosition?: unknown;
   allergens?: unknown;
   available?: unknown;
+  availabilityStart?: unknown;
+  availabilityEnd?: unknown;
+  menu?: unknown;
+  groupId?: unknown;
   variants?: unknown;
 };
 
-/** Validate raw input into a StoredProduct (without id/sku assignment). */
-async function validateProductInput(input: ProductInput): Promise<{
+type ValidatedProduct = {
   title: string;
   description: string;
   imageSrc?: string;
   imageObjectPosition?: string;
   allergens: string[];
   available: boolean;
+  availabilityStart?: string;
+  availabilityEnd?: string;
+  menu: MenuKind;
+  groupId: string;
   variants: { shortLabel: string; unitAmountCents: number }[];
-}> {
+};
+
+async function validateProductInput(input: ProductInput): Promise<ValidatedProduct> {
   const title = typeof input.title === "string" ? input.title.trim() : "";
   assert(title.length >= 2 && title.length <= 80, "Name must be 2-80 characters");
 
@@ -129,10 +141,7 @@ async function validateProductInput(input: ProductInput): Promise<{
   let imageObjectPosition: string | undefined;
   if (typeof input.imageObjectPosition === "string" && input.imageObjectPosition.trim() !== "") {
     imageObjectPosition = input.imageObjectPosition.trim();
-    assert(
-      /^[a-z0-9% .-]{1,40}$/i.test(imageObjectPosition),
-      "Invalid image position value"
-    );
+    assert(/^[a-z0-9% .-]{1,40}$/i.test(imageObjectPosition), "Invalid image position value");
   }
 
   assert(Array.isArray(input.allergens), "Allergens must be a list");
@@ -143,6 +152,17 @@ async function validateProductInput(input: ProductInput): Promise<{
     .slice(0, 10);
 
   const available = input.available !== false;
+  const availabilityStart = optionalLocalDateTime(input.availabilityStart, "Ordering opens");
+  const availabilityEnd = optionalLocalDateTime(input.availabilityEnd, "Ordering closes");
+  assert(
+    !availabilityStart || !availabilityEnd || availabilityStart < availabilityEnd,
+    "Ordering closes must be later than ordering opens"
+  );
+
+  const menu = input.menu ?? "signature";
+  assert(MENU_KINDS.includes(menu as MenuKind), "Choose a valid menu");
+  const groupId = typeof input.groupId === "string" ? input.groupId.trim() : "";
+  assert(groupId.length <= 80, "Invalid menu group");
 
   assert(Array.isArray(input.variants), "At least one size & price is required");
   const rawVariants = input.variants as { shortLabel?: unknown; unitAmountCents?: unknown }[];
@@ -158,7 +178,38 @@ async function validateProductInput(input: ProductInput): Promise<{
     return { shortLabel, unitAmountCents: cents };
   });
 
-  return { title, description, imageSrc, imageObjectPosition, allergens, available, variants };
+  return {
+    title,
+    description,
+    imageSrc,
+    imageObjectPosition,
+    allergens,
+    available,
+    availabilityStart,
+    availabilityEnd,
+    menu: menu as MenuKind,
+    groupId,
+    variants,
+  };
+}
+
+function optionalLocalDateTime(value: unknown, label: string): string | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  assert(typeof value === "string" && isValidLocalDateTime(value), `${label} has an invalid date or time`);
+  return value;
+}
+
+function resolveGroupId(content: SiteContent, fields: ValidatedProduct): string {
+  if (fields.groupId) {
+    const requested = content.groups.find(
+      (group) => group.id === fields.groupId && group.menu === fields.menu
+    );
+    assert(requested, "Choose a group from the selected menu");
+    return requested.id;
+  }
+  const fallback = content.groups.find((group) => group.menu === fields.menu);
+  assert(fallback, "Create a group for this menu first");
+  return fallback.id;
 }
 
 /** Keep skus stable across edits (same label = same sku), mint new ones for new labels. */
@@ -204,20 +255,17 @@ async function refreshOgImage(
     return `/og/dynamic/${product.id}.jpg`;
   } catch (err) {
     console.error("OG crop generation failed:", err);
-    // Non-fatal: page falls back to the default share image.
     return undefined;
   }
 }
 
-export async function createProduct(input: ProductInput): Promise<StoredProduct> {
-  const fields = await validateProductInput(input);
-  const content = await getSiteContent();
-
-  let id = slugify(fields.title);
-  assert(id.length >= 2, "Name must contain some letters or numbers");
-  while (content.products.some((p) => p.id === id)) id = `${id}-2`;
-
-  const base = {
+function productFromFields(
+  id: string,
+  fields: ValidatedProduct,
+  content: SiteContent,
+  previous?: StoredProduct
+): Omit<StoredProduct, "ogImagePath"> {
+  return {
     id,
     title: fields.title,
     description: fields.description,
@@ -225,8 +273,25 @@ export async function createProduct(input: ProductInput): Promise<StoredProduct>
     ...(fields.imageObjectPosition ? { imageObjectPosition: fields.imageObjectPosition } : {}),
     allergens: fields.allergens,
     available: fields.available,
-    variants: assignSkus(id, fields.variants),
+    ...(fields.availabilityStart ? { availabilityStart: fields.availabilityStart } : {}),
+    ...(fields.availabilityEnd ? { availabilityEnd: fields.availabilityEnd } : {}),
+    menu: fields.menu,
+    groupId: resolveGroupId(content, fields),
+    variants: assignSkus(id, fields.variants, previous),
   };
+}
+
+export async function createProduct(input: ProductInput): Promise<StoredProduct> {
+  const fields = await validateProductInput(input);
+  const content = await getSiteContent();
+
+  const baseId = slugify(fields.title);
+  assert(baseId.length >= 2, "Name must contain some letters or numbers");
+  let id = baseId;
+  let suffix = 2;
+  while (content.products.some((product) => product.id === id)) id = `${baseId}-${suffix++}`;
+
+  const base = productFromFields(id, fields, content);
   const ogImagePath = await refreshOgImage(base);
   const product: StoredProduct = { ...base, ...(ogImagePath ? { ogImagePath } : {}) };
 
@@ -238,20 +303,11 @@ export async function createProduct(input: ProductInput): Promise<StoredProduct>
 export async function updateProduct(id: string, input: ProductInput): Promise<StoredProduct> {
   const fields = await validateProductInput(input);
   const content = await getSiteContent();
-  const index = content.products.findIndex((p) => p.id === id);
+  const index = content.products.findIndex((product) => product.id === id);
   assert(index !== -1, "Product not found");
   const previous = content.products[index];
 
-  const base = {
-    id,
-    title: fields.title,
-    description: fields.description,
-    ...(fields.imageSrc ? { imageSrc: fields.imageSrc } : {}),
-    ...(fields.imageObjectPosition ? { imageObjectPosition: fields.imageObjectPosition } : {}),
-    allergens: fields.allergens,
-    available: fields.available,
-    variants: assignSkus(id, fields.variants, previous),
-  };
+  const base = productFromFields(id, fields, content, previous);
   const ogImagePath = await refreshOgImage(base, previous);
   const product: StoredProduct = { ...base, ...(ogImagePath ? { ogImagePath } : {}) };
 
@@ -262,10 +318,54 @@ export async function updateProduct(id: string, input: ProductInput): Promise<St
 
 export async function deleteProduct(id: string): Promise<void> {
   const content = await getSiteContent();
-  const index = content.products.findIndex((p) => p.id === id);
+  const index = content.products.findIndex((product) => product.id === id);
   assert(index !== -1, "Product not found");
   content.products.splice(index, 1);
   await persist(content);
+}
+
+export async function updateMenuConfiguration(input: unknown): Promise<SiteContent> {
+  assert(typeof input === "object" && input !== null, "Invalid menu arrangement");
+  const raw = input as { menu?: unknown; groups?: unknown; products?: unknown };
+  assert(MENU_KINDS.includes(raw.menu as MenuKind), "Choose a valid menu");
+  const menu = raw.menu as MenuKind;
+  assert(Array.isArray(raw.groups) && raw.groups.length >= 1 && raw.groups.length <= 20, "Use 1-20 groups");
+  assert(Array.isArray(raw.products), "Invalid product list");
+
+  const content = await getSiteContent();
+  const menuProducts = content.products.filter((product) => product.menu === menu);
+  assert(raw.products.length === menuProducts.length, "The menu changed - reload and try again");
+
+  const groupIds = new Set<string>();
+  const groups = raw.groups.map((value) => {
+    assert(typeof value === "object" && value !== null, "Invalid group");
+    const row = value as { id?: unknown; name?: unknown };
+    assert(
+      typeof row.id === "string" && /^[a-zA-Z0-9-]{1,80}$/.test(row.id) && !groupIds.has(row.id),
+      "Group IDs must be unique"
+    );
+    const name = typeof row.name === "string" ? row.name.trim() : "";
+    assert(name.length >= 1 && name.length <= 60, "Group names must be 1-60 characters");
+    groupIds.add(row.id);
+    return { id: row.id, menu, name };
+  });
+
+  const productIds = new Set<string>();
+  const products = raw.products.map((value) => {
+    assert(typeof value === "object" && value !== null, "Invalid product row");
+    const row = value as { id?: unknown; groupId?: unknown };
+    assert(typeof row.id === "string" && !productIds.has(row.id), "Product list must be unique");
+    assert(typeof row.groupId === "string" && groupIds.has(row.groupId), "Choose a valid group");
+    const product = menuProducts.find((item) => item.id === row.id);
+    assert(product, "The menu changed - reload and try again");
+    productIds.add(row.id);
+    return { ...product, groupId: row.groupId };
+  });
+
+  content.groups = [...content.groups.filter((group) => group.menu !== menu), ...groups];
+  content.products = [...content.products.filter((product) => product.menu !== menu), ...products];
+  await persist(content);
+  return content;
 }
 
 export async function updateCustomItems(input: unknown): Promise<StoredCustomItem[]> {
@@ -301,8 +401,10 @@ async function persist(content: SiteContent): Promise<void> {
 export async function listPhotoLibrary(): Promise<{ path: string; inUseBy: string[] }[]> {
   const content = await getSiteContent();
   const inUse = new Map<string, string[]>();
-  for (const p of content.products) {
-    if (p.imageSrc) inUse.set(p.imageSrc, [...(inUse.get(p.imageSrc) ?? []), p.title]);
+  for (const product of content.products) {
+    if (product.imageSrc) {
+      inUse.set(product.imageSrc, [...(inUse.get(product.imageSrc) ?? []), product.title]);
+    }
   }
 
   const seen = new Set<string>();
@@ -314,23 +416,19 @@ export async function listPhotoLibrary(): Promise<{ path: string; inUseBy: strin
     results.push({ path: publicPath, inUseBy: inUse.get(publicPath) ?? [] });
   };
 
-  // Uploads first (newest first), then photos referenced by products.
   const uploadNames = new Set<string>();
   for (const dir of [UPLOADS_DIR, LEGACY_UPLOADS_DIR]) {
     try {
-      for (const f of await fs.readdir(dir)) {
-        if (IMAGE_EXTENSIONS.has(path.extname(f).toLowerCase())) uploadNames.add(f);
+      for (const file of await fs.readdir(dir)) {
+        if (IMAGE_EXTENSIONS.has(path.extname(file).toLowerCase())) uploadNames.add(file);
       }
     } catch {
       // dir does not exist yet
     }
   }
-  [...uploadNames]
-    .sort()
-    .reverse()
-    .forEach((f) => add(`/uploads/${f}`));
-  for (const p of content.products) {
-    if (p.imageSrc) add(p.imageSrc);
+  [...uploadNames].sort().reverse().forEach((file) => add(`/uploads/${file}`));
+  for (const product of content.products) {
+    if (product.imageSrc) add(product.imageSrc);
   }
   return results;
 }
@@ -346,7 +444,7 @@ export async function deleteUploadedPhoto(publicPath: unknown): Promise<void> {
   );
   const content = await getSiteContent();
   assert(
-    !content.products.some((p) => p.imageSrc === publicPath),
+    !content.products.some((product) => product.imageSrc === publicPath),
     "That photo is used by a menu item - change the item's photo first"
   );
   await fs.unlink(abs);

@@ -26,7 +26,7 @@ export function CartPanel() {
     catalog,
     lines,
     subtotalCents,
-    fulfillment,
+    fulfillment: savedFulfillment,
     address,
     setFulfillment,
     setAddress,
@@ -36,6 +36,8 @@ export function CartPanel() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasPorchItems = lines.some((line) => catalog[line.sku]?.menu === "porch");
+  const fulfillment = hasPorchItems ? "pickup" : savedFulfillment;
 
   const deliveryFeeLine = fulfillment === "delivery" ? DELIVERY_FEE_CENTS : 0;
   const netCents = subtotalCents + deliveryFeeLine;
@@ -100,22 +102,27 @@ export function CartPanel() {
             onChange={() => setFulfillment("pickup")}
           />
           <span>
-            <span className="font-medium text-black">Pickup (free)</span>
-            <span className="block text-sm text-black/60">West Jordan, UT</span>
+            <span className="font-medium text-black">{hasPorchItems ? "Porch Pickup (free)" : "Pickup (free)"}</span>
+            <span className="block text-sm text-black/60">
+              {hasPorchItems ? "West Jordan, UT - Bailey will confirm the pickup details" : "West Jordan, UT"}
+            </span>
           </span>
         </label>
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-black/6 bg-white/90 px-3 py-2">
+        <label className={`flex items-start gap-3 rounded-xl border border-black/6 bg-white/90 px-3 py-2 ${hasPorchItems ? "opacity-50" : "cursor-pointer"}`}>
           <input
             type="radio"
             name="fulfillment"
             className="mt-1"
             checked={fulfillment === "delivery"}
+            disabled={hasPorchItems}
             onChange={() => setFulfillment("delivery")}
           />
           <span>
             <span className="font-medium text-black">Local delivery</span>
             <span className="block text-sm text-black/60">
-              {formatDeliveryFeeDisplay()} fee  -  text Bailey to confirm your address is in zone
+              {hasPorchItems
+                ? "Unavailable because your cart includes Porch Pickup items"
+                : `${formatDeliveryFeeDisplay()} fee - text Bailey to confirm your address is in zone`}
             </span>
           </span>
         </label>

@@ -10,7 +10,7 @@ type Props = { params: Promise<{ id: string }> };
 export default async function EditProductPage({ params }: Props) {
   await requireAdmin();
   const { id } = await params;
-  const { products } = await getSiteContent();
+  const { products, groups } = await getSiteContent();
   const product = products.find((p) => p.id === id);
   if (!product) notFound();
   const photoLibrary = await listPhotoLibrary();
@@ -27,6 +27,7 @@ export default async function EditProductPage({ params }: Props) {
       <ProductForm
         mode="edit"
         photoLibrary={photoLibrary}
+        groups={groups}
         product={{
           id: product.id,
           title: product.title,
@@ -35,6 +36,10 @@ export default async function EditProductPage({ params }: Props) {
           imageObjectPosition: product.imageObjectPosition,
           allergens: product.allergens,
           available: product.available,
+          availabilityStart: product.availabilityStart,
+          availabilityEnd: product.availabilityEnd,
+          menu: product.menu,
+          groupId: product.groupId,
           variants: product.variants.map((v) => ({
             shortLabel: v.shortLabel,
             priceDollars: formatCents(v.unitAmountCents).replace("$", ""),

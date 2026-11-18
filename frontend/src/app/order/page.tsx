@@ -4,7 +4,8 @@ import { JsonLd } from "@/components/JsonLd";
 import { OrderCart } from "@/components/OrderCart";
 import { formatLeadTimeNotice } from "@/config/site";
 import { bakerySchema } from "@/data/menu";
-import { getAvailableProducts, variantPriceDisplay } from "@/lib/content";
+import { getMenuContent } from "@/lib/content";
+import { toCartProducts } from "@/lib/cart-products";
 import { breadcrumbJsonLd, jsonLdGraph, pageMetadata, webPageJsonLd } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
@@ -30,19 +31,7 @@ const orderLd = jsonLdGraph(
 );
 
 export default async function OrderPage() {
-  const storeProducts = await getAvailableProducts();
-  const products = storeProducts.map((p) => ({
-    id: p.id,
-    title: p.title,
-    description: p.description,
-    imageSrc: p.imageSrc,
-    imageObjectPosition: p.imageObjectPosition,
-    variants: p.variants.map((v) => ({
-      sku: v.sku,
-      shortLabel: v.shortLabel,
-      priceDisplay: variantPriceDisplay(v),
-    })),
-  }));
+  const { groups, products } = await getMenuContent("signature");
   return (
     <main className="flex-grow px-8 py-16 md:py-24">
       <JsonLd data={orderLd} />
@@ -52,25 +41,24 @@ export default async function OrderPage() {
         <h1 className="mt-3 font-serif text-4xl italic text-black md:text-5xl">Order Fresh</h1>
         <p className="mt-4 max-w-2xl text-lg text-black/70">
           Shop the menu below, add your favorite items to the cart, then check out. For custom
-          &quot;Make Your Own&quot; bakes, text Bailey for a quote. Venmo will be used for custom
-          orders.
+          &quot;Make Your Own&quot; bakes, text Bailey for a quote. Venmo will be used for custom orders.
         </p>
         <p className="mt-4 max-w-2xl rounded-xl border border-black/8 bg-white/50 px-4 py-3 text-sm text-black/75">
           {formatLeadTimeNotice()}
         </p>
         <p className="mt-4 text-sm text-black/55">
-          <Link href="/menu" className="underline underline-offset-2 hover:text-black">
-            View full menu &amp; pricing
-          </Link>{" "}
-          ·{" "}
-          <a href="sms:8014503852" className="underline underline-offset-2 hover:text-black">
-            Text Bailey at 801-450-3852
-          </a>
+          <Link href="/menu" className="underline underline-offset-2 hover:text-black">View full menu &amp; pricing</Link>
+          {" · "}
+          <Link href="/seasonal" className="underline underline-offset-2 hover:text-black">Seasonal menu</Link>
+          {" · "}
+          <Link href="/porch-pickup" className="underline underline-offset-2 hover:text-black">Porch Pickup</Link>
+          {" · "}
+          <a href="sms:8014503852" className="underline underline-offset-2 hover:text-black">Text Bailey at 801-450-3852</a>
         </p>
       </div>
 
       <div className="mx-auto mt-14 max-w-7xl">
-        <OrderCart products={products} />
+        <OrderCart products={toCartProducts(products)} groups={groups} />
       </div>
     </main>
   );

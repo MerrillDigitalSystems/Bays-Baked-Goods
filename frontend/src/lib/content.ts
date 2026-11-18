@@ -5,44 +5,38 @@ import {
   checkoutProducts as seedProducts,
   customMenuItems as seedCustomItems,
 } from "@/data/menu";
+import { MENU_KINDS, MENU_PATHS, type MenuKind } from "@/lib/menus";
+import { isCurrentlyAvailable } from "@/lib/availability";
 
-/**
- * Runtime content store  -  the single source of truth for products once Bailey
- * starts editing. Lives at `content/products.json` (gitignored, survives
- * deploys on the Pi). Until that file exists, everything derives from the
- * committed seed data in `src/data/menu.ts`, so a fresh checkout serves
- * exactly what it served before the admin panel existed.
- *
- * Every consumer (menu, order, checkout validation, Product schema, sitemap)
- * reads through this module so prices and photos cannot drift apart.
- * SEO invariants enforced here (see GSC history): Product schema prices are
- * numeric (derived from cents) and `image` is only emitted when the product
- * actually has a photo  -  never borrowed from another item.
- */
+export { MENU_KINDS, MENU_LABELS, MENU_PATHS } from "@/lib/menus";
+export type { MenuKind } from "@/lib/menus";
 
 export type StoredVariant = {
-  /** Stable id used by the cart and validated at checkout. */
   sku: string;
-  /** e.g. "Mini", "4 pack", "One loaf" */
   shortLabel: string;
   unitAmountCents: number;
 };
 
 export type StoredProduct = {
-  /** URL slug, also the product page path `/menu/<id>`. */
   id: string;
   title: string;
   description: string;
-  /** Path under `public/` (e.g. `/uploads/xyz.jpg`). Absent = placeholder card, no schema image. */
   imageSrc?: string;
-  /** CSS object-position for tall subjects. */
   imageObjectPosition?: string;
-  /** 1200x630 share crop under `public/`. Committed `/og/<id>.jpg` for seed photos, `/og/dynamic/<id>.jpg` once Bailey swaps a photo. */
   ogImagePath?: string;
   allergens: string[];
-  /** false hides the item from menu, order page, schema, and sitemap without deleting it. */
   available: boolean;
+  availabilityStart?: string;
+  availabilityEnd?: string;
+  menu: MenuKind;
+  groupId: string;
   variants: StoredVariant[];
+};
+
+export type StoredMenuGroup = {
+  id: string;
+  menu: MenuKind;
+  name: string;
 };
 
 export type StoredCustomItem = {
@@ -54,21 +48,32 @@ export type StoredCustomItem = {
 };
 
 export type SiteContent = {
-  version: 1;
+  version: 2;
   updatedAt: string;
   products: StoredProduct[];
   customItems: StoredCustomItem[];
+  groups: StoredMenuGroup[];
+};
+
+export type CheckoutCatalogEntry = {
+  label: string;
+  unitAmount: number;
+  menu: MenuKind;
 };
 
 const SITE_URL = "https://baysbakedgoods.com";
-
 export const CONTENT_DIR = path.join(process.cwd(), "content");
 const CONTENT_FILE = path.join(CONTENT_DIR, "products.json");
 
-/** Seed derived from the committed menu data  -  what the site serves before Bailey's first edit. */
+const DEFAULT_GROUPS: StoredMenuGroup[] = [
+  { id: "signature", menu: "signature", name: "Signature bakes" },
+  { id: "seasonal", menu: "seasonal", name: "Seasonal favorites" },
+  { id: "porch", menu: "porch", name: "Porch Pickup" },
+];
+
 export function seedContent(): SiteContent {
   return {
-    version: 1,
+    version: 2,
     updatedAt: "seed",
     products: seedProducts.map((p) => ({
       id: p.id,
@@ -78,6 +83,8 @@ export function seedContent(): SiteContent {
       ...(p.imageObjectPosition ? { imageObjectPosition: p.imageObjectPosition } : {}),
       allergens: [...p.allergens],
       available: true,
+      menu: "signature",
+      groupId: "signature",
       variants: p.variants.map((v) => ({
         sku: v.sku,
         shortLabel: v.shortLabel,
@@ -85,38 +92,104 @@ export function seedContent(): SiteContent {
       })),
     })),
     customItems: seedCustomItems.map((c) => ({ ...c })),
+    groups: DEFAULT_GROUPS.map((group) => ({ ...group })),
   };
 }
 
-function isValidContent(data: unknown): data is SiteContent {
-  if (typeof data !== "object" || data === null) return false;
-  const d = data as SiteContent;
-  return (
-    d.version === 1 &&
-    Array.isArray(d.products) &&
-    Array.isArray(d.customItems) &&
-    d.products.every(
-      (p) =>
-        typeof p.id === "string" &&
-        typeof p.title === "string" &&
-        Array.isArray(p.variants) &&
-        p.variants.every(
-          (v) =>
-            typeof v.sku === "string" &&
-            typeof v.shortLabel === "string" &&
-            Number.isFinite(v.unitAmountCents) &&
-            v.unitAmountCents > 0
-        )
-    )
-  );
+function normalizeContent(data: unknown): SiteContent | null {
+  if (typeof data !== "object" || data === null) return null;
+  const raw = data as {
+    version?: unknown;
+    updatedAt?: unknown;
+    products?: unknown;
+    customItems?: unknown;
+    groups?: unknown;
+  };
+  if ((raw.version !== 1 && raw.version !== 2) || !Array.isArray(raw.products) || !Array.isArray(raw.customItems)) {
+    return null;
+  }
+
+  const products: StoredProduct[] = [];
+  for (const value of raw.products) {
+    if (typeof value !== "object" || value === null) return null;
+    const p = value as Partial<StoredProduct>;
+    if (
+      typeof p.id !== "string" ||
+      typeof p.title !== "string" ||
+      typeof p.description !== "string" ||
+      typeof p.available !== "boolean" ||
+      !Array.isArray(p.allergens) ||
+      !Array.isArray(p.variants) ||
+      !p.variants.every(
+        (v) =>
+          typeof v.sku === "string" &&
+          typeof v.shortLabel === "string" &&
+          Number.isFinite(v.unitAmountCents) &&
+          v.unitAmountCents > 0
+      )
+    ) {
+      return null;
+    }
+    const menu: MenuKind = MENU_KINDS.includes(p.menu as MenuKind) ? (p.menu as MenuKind) : "signature";
+    products.push({
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      ...(p.imageSrc ? { imageSrc: p.imageSrc } : {}),
+      ...(p.imageObjectPosition ? { imageObjectPosition: p.imageObjectPosition } : {}),
+      ...(p.ogImagePath ? { ogImagePath: p.ogImagePath } : {}),
+      allergens: p.allergens.filter((a): a is string => typeof a === "string"),
+      available: p.available,
+      ...(p.availabilityStart ? { availabilityStart: p.availabilityStart } : {}),
+      ...(p.availabilityEnd ? { availabilityEnd: p.availabilityEnd } : {}),
+      menu,
+      groupId: typeof p.groupId === "string" ? p.groupId : menu,
+      variants: p.variants.map((v) => ({
+        sku: v.sku,
+        shortLabel: v.shortLabel,
+        unitAmountCents: v.unitAmountCents,
+      })),
+    });
+  }
+
+  const groups: StoredMenuGroup[] = [];
+  if (Array.isArray(raw.groups)) {
+    for (const value of raw.groups) {
+      if (typeof value !== "object" || value === null) continue;
+      const group = value as Partial<StoredMenuGroup>;
+      if (
+        typeof group.id === "string" &&
+        typeof group.name === "string" &&
+        MENU_KINDS.includes(group.menu as MenuKind)
+      ) {
+        groups.push({ id: group.id, name: group.name, menu: group.menu as MenuKind });
+      }
+    }
+  }
+  for (const fallback of DEFAULT_GROUPS) {
+    if (!groups.some((group) => group.menu === fallback.menu)) groups.push({ ...fallback });
+  }
+  for (const product of products) {
+    if (!groups.some((group) => group.id === product.groupId && group.menu === product.menu)) {
+      product.groupId = groups.find((group) => group.menu === product.menu)?.id ?? product.menu;
+    }
+  }
+
+  return {
+    version: 2,
+    updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : "seed",
+    products,
+    customItems: raw.customItems as StoredCustomItem[],
+    groups,
+  };
 }
 
-/** Read the store, falling back to the seed when the file is missing or unreadable. */
 export async function getSiteContent(): Promise<SiteContent> {
   try {
     const raw = await fs.readFile(CONTENT_FILE, "utf8");
     const parsed = JSON.parse(raw) as unknown;
-    if (isValidContent(parsed)) return parsed;
+    const content = normalizeContent(parsed);
+    if (content) return content;
     console.error("content/products.json failed validation - serving seed data");
     return seedContent();
   } catch {
@@ -124,10 +197,6 @@ export async function getSiteContent(): Promise<SiteContent> {
   }
 }
 
-/**
- * Atomic write with a .bak of the previous version, so a bad save can be
- * recovered by hand on the Pi (`cp products.json.bak products.json`).
- */
 export async function saveSiteContent(content: SiteContent): Promise<void> {
   await fs.mkdir(CONTENT_DIR, { recursive: true });
   const json = JSON.stringify(content, null, 2);
@@ -141,24 +210,40 @@ export async function saveSiteContent(content: SiteContent): Promise<void> {
   await fs.rename(tmp, CONTENT_FILE);
 }
 
-/* ------------------------------------------------------------------ */
-/* Derived views                                                       */
-/* ------------------------------------------------------------------ */
-
 export function formatCents(cents: number): string {
   const dollars = cents / 100;
   return Number.isInteger(dollars) ? `$${dollars}` : `$${dollars.toFixed(2)}`;
 }
 
-/** Products shown to customers (available only). */
-export async function getAvailableProducts(): Promise<StoredProduct[]> {
+function matchesMenu(product: StoredProduct, menu?: MenuKind | MenuKind[]): boolean {
+  if (!menu) return true;
+  return Array.isArray(menu) ? menu.includes(product.menu) : product.menu === menu;
+}
+
+export async function getAvailableProducts(menu?: MenuKind | MenuKind[]): Promise<StoredProduct[]> {
   const { products } = await getSiteContent();
-  return products.filter((p) => p.available && p.variants.length > 0);
+  return products.filter(
+    (product) => matchesMenu(product, menu) && product.variants.length > 0 && isCurrentlyAvailable(product)
+  );
+}
+
+export async function getMenuContent(menu: MenuKind) {
+  const content = await getSiteContent();
+  return {
+    groups: content.groups.filter((group) => group.menu === menu),
+    products: content.products.filter(
+      (product) =>
+        product.menu === menu && product.variants.length > 0 && isCurrentlyAvailable(product)
+    ),
+  };
 }
 
 export async function getProductBySlug(slug: string): Promise<StoredProduct | undefined> {
   const { products } = await getSiteContent();
-  return products.find((p) => p.id === slug && p.available && p.variants.length > 0);
+  return products.find(
+    (product) =>
+      product.id === slug && product.variants.length > 0 && isCurrentlyAvailable(product)
+  );
 }
 
 export async function getCustomItems(): Promise<StoredCustomItem[]> {
@@ -166,54 +251,45 @@ export async function getCustomItems(): Promise<StoredCustomItem[]> {
   return customItems;
 }
 
-/** SKUs allowed at checkout  -  server-validated, unavailable items excluded. */
-export async function getCheckoutCatalog(): Promise<
-  Record<string, { label: string; unitAmount: number }>
-> {
+export async function getCheckoutCatalog(): Promise<Record<string, CheckoutCatalogEntry>> {
   const products = await getAvailableProducts();
-  const catalog: Record<string, { label: string; unitAmount: number }> = {};
-  for (const p of products) {
-    for (const v of p.variants) {
-      catalog[v.sku] = {
-        label: p.variants.length > 1 ? `${p.title} (${v.shortLabel})` : p.title,
-        unitAmount: v.unitAmountCents,
+  const catalog: Record<string, CheckoutCatalogEntry> = {};
+  for (const product of products) {
+    for (const variant of product.variants) {
+      catalog[variant.sku] = {
+        label: product.variants.length > 1 ? `${product.title} (${variant.shortLabel})` : product.title,
+        unitAmount: variant.unitAmountCents,
+        menu: product.menu,
       };
     }
   }
   return catalog;
 }
 
-/** Price display for a variant, e.g. "$5". */
-export function variantPriceDisplay(v: StoredVariant): string {
-  return formatCents(v.unitAmountCents);
+export function variantPriceDisplay(variant: StoredVariant): string {
+  return formatCents(variant.unitAmountCents);
 }
 
-/** Menu-page summary row, e.g. size "Mini / Regular", price "$5 / $10". */
-export function productSummary(p: StoredProduct): {
+export function productSummary(product: StoredProduct): {
   name: string;
   size: string | null;
   price: string;
   slug: string;
 } {
-  const multi = p.variants.length > 1;
+  const multi = product.variants.length > 1;
   return {
-    name: p.title,
-    size: multi ? p.variants.map((v) => v.shortLabel).join(" / ") : null,
-    price: p.variants.map((v) => formatCents(v.unitAmountCents)).join(" / "),
-    slug: p.id,
+    name: product.title,
+    size: multi ? product.variants.map((variant) => variant.shortLabel).join(" / ") : null,
+    price: product.variants.map((variant) => formatCents(variant.unitAmountCents)).join(" / "),
+    slug: product.id,
   };
 }
 
-/* ------------------------------------------------------------------ */
-/* Structured data (see seo-gsc-work notes: numeric prices, absolute    */
-/* image URLs, and no image at all when a product has no photo)         */
-/* ------------------------------------------------------------------ */
-
-function buildOffer(prices: number[]) {
+function buildOffer(prices: number[], path: string) {
   const common = {
     priceCurrency: "USD",
     availability: "https://schema.org/InStock",
-    url: `${SITE_URL}/order`,
+    url: `${SITE_URL}${path}`,
   };
   if (prices.length === 0) return null;
   if (prices.length === 1) {
@@ -228,13 +304,12 @@ function buildOffer(prices: number[]) {
   };
 }
 
-function productPrices(p: StoredProduct): number[] {
-  return p.variants.map((v) => v.unitAmountCents / 100);
+function productPrices(product: StoredProduct): number[] {
+  return product.variants.map((variant) => variant.unitAmountCents / 100);
 }
 
-/** Product structured data for a single product detail page. */
 export function getProductDetailJsonLd(product: StoredProduct) {
-  const offers = buildOffer(productPrices(product));
+  const offers = buildOffer(productPrices(product), MENU_PATHS[product.menu]);
   return {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -247,22 +322,21 @@ export function getProductDetailJsonLd(product: StoredProduct) {
   };
 }
 
-/** ItemList + Product entries for the menu page. */
-export async function getMenuItemListJsonLd() {
-  const products = await getAvailableProducts();
+export async function getMenuItemListJsonLd(products?: StoredProduct[]) {
+  const items = products ?? (await getAvailableProducts("signature"));
   return {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    itemListElement: products.map((p, index) => {
-      const offers = buildOffer(productPrices(p));
+    itemListElement: items.map((product, index) => {
+      const offers = buildOffer(productPrices(product), MENU_PATHS[product.menu]);
       return {
         "@type": "ListItem",
         position: index + 1,
         item: {
           "@type": "Product",
-          name: p.title,
-          description: `${p.title} - handmade in small batches at Bay's Baked Goods, a home bakery in West Jordan, Utah.`,
-          ...(p.imageSrc ? { image: `${SITE_URL}${p.imageSrc}` } : {}),
+          name: product.title,
+          description: `${product.title} - handmade in small batches at Bay's Baked Goods, a home bakery in West Jordan, Utah.`,
+          ...(product.imageSrc ? { image: `${SITE_URL}${product.imageSrc}` } : {}),
           brand: { "@type": "Brand", name: "Bay's Baked Goods" },
           category: "Bakery",
           ...(offers ? { offers } : {}),
